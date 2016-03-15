@@ -2,7 +2,7 @@ Source: apteligentimporter
 Section: python
 Priority: extra
 Maintainer: Paul frederiks <pfrederiks@ebay.com>
-Build-Depends: debhelper (>= 9), python, dh-virtualenv (>= 0.7)
+Build-Depends: debhelper (>= 9), python, dh-virtualenv (>= 0.6)
 Standards-Version: 3.9.5
 
 Package: apteligentimporter
