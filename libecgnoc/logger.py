@@ -24,8 +24,6 @@ def setup(project, scriptfile, debug=False):
         l.setLevel(logging.WARNING)
 
     name, ext = os.path.splitext(os.path.basename(scriptfile))
-    assert ext == '.py', ('setuplogger should be called with the __file__'
-                          'of the main python script')
 
     path = resolvepaths.resolve(resolvepaths.LOG, project)
     filename = os.path.join(path, name + '.log')
