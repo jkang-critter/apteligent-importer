@@ -2,12 +2,14 @@
 Setup logging for the all nocgraphite-scripts in a consistent way using the
 dramatically overly complex python logging library.
 '''
+from __future__ import absolute_import
 import os
 import logging
 import logging.handlers
-from resolvepaths import LOG_DIR
+from libecgnoc import resolvepaths
 
-def setuplogger(scriptfile, debug=False):
+
+def setup(project, scriptfile, debug=False):
     '''
     Return root logger configured to log to log_dir using the __file__
     global variable to determine basename of the log file.
@@ -25,7 +27,8 @@ def setuplogger(scriptfile, debug=False):
     assert ext == '.py', ('setuplogger should be called with the __file__'
                           'of the main python script')
 
-    filename = os.path.join(LOG_DIR, name + '.log')
+    path = resolvepaths.resolve(resolvepaths.LOG, project)
+    filename = os.path.join(path, name + '.log')
 
     # Acquire root logger.
     log = logging.getLogger()

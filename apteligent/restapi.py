@@ -2,8 +2,8 @@ import json
 import time
 import requests
 import logging
-from apteligentimporter.jsonstore import Cache
-from apteligentimporter.textstore import Blacklist
+from libecgnoc import jsonstore
+from libecgnoc import textstore
 
 # This suppresses warnings on versions of python below 2.7.9
 # requests.packages.urllib3.disable_warnings()
@@ -50,31 +50,30 @@ def check_http_interaction(response):
     response.raise_for_status()
 
 
-class REST_API(object):
+class Client(object):
     """
-    Implements interface to Apteligent REST API.
+    Implements a client of the Apteligent REST API.
     """
 
-    def __init__(self, hostname=None, username=None, password=None,
-                 clientID=None, proxies=None):
+    def __init__(self, project, hostname, username, password,
+                 clientID, proxies=None):
         """
         Initialize the REST API using provided Apteligent credentials.
         The following keyword arguments need to be provided:
         hostname, username, password and clientID
         Optionally a list of proxies could be given.
         """
-        if hostname and username and password and clientID:
-            self.hostname = hostname
-            self.username = username
-            self.password = password
-            self.clientID = clientID
-            self.proxies = proxies
-        else:
-            raise ValueError('Apteligent credentials are missing')
+        self.hostname = hostname
+        self.username = username
+        self.password = password
+        self.clientID = clientID
+        self.proxies = proxies
 
-        self.token = Cache('token')
-        self.apps = Cache('apps')
-        self.app_blacklist = Blacklist('app')
+        cache = jsonstore.cache(project)
+        blacklist = textstore.blacklist(project)
+        self.token = cache('token')
+        self.apps = cache('apps')
+        self.app_blacklist = blacklist('app')
 
     def all_your_base(self):
         """"

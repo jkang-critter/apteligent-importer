@@ -2,20 +2,27 @@ import time
 import json
 import os
 import logging
-from apteligentimporter.resolvepaths import CONFIG_DIR, CACHE_DIR
+from libecgnoc import resolvepaths
 
 log = logging.getLogger(__name__)
 
 
 class JSONstore(object):
+    Extension = '.json'
 
-    def __init__(self, name, path):
-        self.path = path
+    def __init__(self, storagedir, name, readonly=True):
+        self.path = os.path.join(storagedir, name + self.Extension)
         self.name = name
         self.data = dict()
         self.last_update = None
+        log.debug('%s at %s', name, self.path)
         if self.exists():
             self.load()
+        if readonly:
+            self.store = self._disabled
+
+    def _disabled(self):
+        raise RuntimeError('Method is disabled')
 
     def exists(self):
         return os.path.isfile(self.path)
@@ -31,11 +38,11 @@ class JSONstore(object):
                 log.info('Loaded %s from json cache.', self.path)
                 self.last_update = time.time()
                 return self.data
-        except IOError, e:
+        except IOError as e:
             log.exception("Script failed to open or write %s\n %(e)s",
                           self.path, e)
             raise
-        except json.JSONDecodeError, e:
+        except json.JSONDecodeError as e:
             log.exception("Simplejson was unable to parse %s:\n %(e)s",
                           self.path, e)
             raise
@@ -67,18 +74,25 @@ class JSONstore(object):
             os.remove(lockfile)
 
 
-class Cache(JSONstore):
+def config(project, name=None):
+    storagedir = resolvepaths.resolve(resolvepaths.CONFIG, project)
 
-    def __init__(self, name):
-        path = os.path.join(CACHE_DIR, name + '.json')
-        super(Cache, self).__init__(name, path)
+    def creator(_name):
+        return JSONstore(storagedir, _name, readonly=True)
+
+    if name:
+        return creator(name)
+    else:
+        return creator
 
 
-class Config(JSONstore):
+def cache(project, name=None):
+    storagedir = resolvepaths.resolve(resolvepaths.CACHE, project)
 
-    def __init__(self, name):
-        path = os.path.join(CONFIG_DIR, name + '.json')
-        super(Config, self).__init__(name, path)
+    def creator(_name):
+        return JSONstore(storagedir, _name, readonly=False)
 
-    def store(self):
-        raise RuntimeError("Config should not use store() method")
+    if name:
+        return creator(name)
+    else:
+        return creator

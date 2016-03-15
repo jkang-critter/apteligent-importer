@@ -1,0 +1,6 @@
+{
+    "host": "127.0.0.1",
+    "port": 2014,
+    "protocol": "dummy",
+    "max_buffer": 500
+}

@@ -1,8 +1,10 @@
+from __future__ import absolute_import
 import logging
 import re
 import os
-from resolvepaths import CONFIG_DIR
+from libecgnoc import resolvepaths
 log = logging.getLogger(__name__)
+
 
 class Regexgroup(object):
     def __init__(self, regexp, group):
@@ -76,7 +78,7 @@ class GroupmapParser(object):
 
     def addregex(self, store, groups):
         try:
-            self.lineno, line = store.next()
+            self.lineno, line = next(store)
         except StopIteration:
             return
         if line.strip() == "":
@@ -92,7 +94,7 @@ class GroupmapParser(object):
 
     def scannext(self, store):
         try:
-            linenumber, line = store.next()
+            linenumber, line = next(store)
         except StopIteration:
             return self.groupmap
         if line == "" or line.startswith('#'):
@@ -115,9 +117,9 @@ class Groupmap(object):
 
     Extension = '.map'
 
-    def __init__(self, name):
+    def __init__(self, storagedir, name):
         self.name = name
-        self.path = os.path.join(CONFIG_DIR, name + self.Extension)
+        self.path = os.path.join(storagedir, name + self.Extension)
         self.data = None
         self.last_update = None
         if self.exists():
@@ -128,7 +130,7 @@ class Groupmap(object):
 
     def __str__(self):
         builder = ""
-        for groups in self.data.values():
+        for groups in self.data.itervalues():
             builder += str(groups)
             builder += '\n'
         return builder
@@ -139,3 +141,15 @@ class Groupmap(object):
     def load(self):
         parser = GroupmapParser(self.path)
         self.data = parser.parse()
+
+
+def groupmap(project, name=None):
+    path = resolvepaths.resolve(resolvepaths.CONFIG, project)
+
+    def creator(_name):
+        return Groupmap(path, _name)
+
+    if name:
+        return creator(name)
+    else:
+        return creator

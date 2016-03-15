@@ -3,12 +3,12 @@
 Script to import the apteligent livestats out of the current beta API.
 '''
 
-from apteligentimporter import (setuplogger,
-                                REST_API,
-                                CarbonSink,
-                                schedule,
-                                Config,
-                                RequestException)
+from libecgnoc import (logger,
+                       schedule,
+                       jsonstore)
+
+import tographite
+import apteligent
 
 import time
 import concurrent.futures
@@ -17,23 +17,22 @@ from argparse import ArgumentParser
 metric_root = None
 
 
-def import_livestats(cc, gp, appids):
-    global metric_root
+def import_livestats(metric_root, at, gp, appids):
     failures = list()
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
-        future_to_app_id = {executor.submit(cc.livestats_periodic,
+        future_to_app_id = {executor.submit(at.livestats_periodic,
                             app_id, 'total', False):
                                 app_id for app_id in appids}
 
         for future in concurrent.futures.as_completed(future_to_app_id):
             app_id = future_to_app_id[future]
-            app_name = cc.appname(app_id)
+            app_name = at.appname(app_id)
             prefix = [metric_root, app_name, 'live']
 
             try:
                 stats = future.result()
-            except RequestException:
+            except:
                 failures.append(app_id, prefix)
                 log.exception('Request failed for %s with app ID: %s.',
                               app_name, app_id)
@@ -54,16 +53,16 @@ def import_livestats(cc, gp, appids):
     return failures
 
 
-def main():
+def main(project):
 
-    apteligentconf = Config('apteligent')
-    graphiteconf = Config('graphite')
+    config = jsonstore.config(project)
+    apteligentconf = config('apteligent')
+    graphiteconf = config('graphite')
 
-    global metric_root
     try:
         metric_root = apteligentconf.data.pop('metric_root')
-        cc = REST_API(**apteligentconf.data)
-        gp = CarbonSink(**graphiteconf.data)
+        at = apteligent.restapi.Client(project, **apteligentconf.data)
+        gp = tographite.CarbonSink(**graphiteconf.data)
     except (KeyError, TypeError):
         log.exception('The json configuration files contains'
                       'an improper key.')
@@ -74,15 +73,15 @@ def main():
     while True:
         sched.sleep_until_next_run()
         start = time.time()
-        appids = cc.get_apps().keys()
-        failures = import_livestats(cc, gp, appids)
+        appids = at.get_apps().keys()
+        failures = import_livestats(metric_root, at, gp, appids)
         if failures:
             log.info('Retrying %s failed requests', len(failures))
-            failures = import_livestats(cc, gp, failures)
+            failures = import_livestats(at, gp, failures)
             if failures:
                 log.info('Giving up.... %s failed requests', len(failures))
             else:
-                log.info('Retry successful')
+                log.info('Retry suatessful')
 
         gp.flush_buffer()
 
@@ -97,10 +96,13 @@ def main():
 if __name__ == "__main__":
 
     parser = ArgumentParser(description=__doc__)
+    parser.add_argument("-p", "--project", dest="project",
+                        default="apteligent-importer",
+                        help="Project name")
     parser.add_argument("-q", "--quiet", action="store_false",
                         dest="verbose", default=True,
                         help="Suppress debug level log messages")
     args = parser.parse_args()
 
-    log = setuplogger(__file__, debug=args.verbose)
-    main()
+    log = logger.setup(args.project, __file__, debug=args.verbose)
+    main(args.project)

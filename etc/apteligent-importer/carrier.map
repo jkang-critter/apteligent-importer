@@ -1,0 +1,171 @@
+[AU]
+(?i)amaysim         Amaysim
+(?i)optus           Optus
+(?i)telstra         Telstra
+(?i)virgin          Virgin
+(?i)vodafone        Vodafone
+3(?!G)              Vodafone
+(?i)wifi            Wifi
+.*                  Other
+
+[AR]
+(?i)claro           Claro
+(?i)movistar        Movistar
+(?i)personal        Personal
+(?i)Wifi            Wifi
+.*                  Other
+
+[CA]
+(?i)Rogers          Rogers
+(?i)Bell            Bell
+(?i)WIND            WIND
+(?i)SaskTel         SaskTel
+(?i)Vide?oTron      Videotron
+(?i)MTS             MTS
+(?i)Telus           Telus
+(?i)Virgin          Bell
+(?i)Koodo           Telus
+(?i)Fido            Rogers
+(?i)Eastlink        EastLink
+(?i)ATT             AT_T
+(?i)Cityfone        Rogers
+(?i)Mobilicity      Rogers
+(?i)Wifi            Wifi
+.*                  Other
+
+[US]
+(?i)verizon         Verizon
+(?i)t-?mobile       T-mobile
+(?i)att             AT_T
+(?i)metro           Metro
+(?i)sprint          Sprint
+(?i)boost           Boost
+(?i)HOME            HOME
+(?i)Cricket         Cricket
+(?i)U.?S.*cellular  US_Cellular
+(?i)Wifi            Wifi
+.*                  Other
+
+[IE]
+(?i)vodafone        Vodafone
+3(?!G)              Three
+(?i)tesco           Tesco_Mobile
+(?i)meteor          MeteorIE
+(?i)O2              O2
+(?i)eir             eir
+(?i)eMobile         eir
+(?i)Wifi            Wifi
+.*                  Other
+
+[PL]
+(?i)PLAY.T-?Mobile  T-Mobile
+(?i)PLAY.PLus       Plus
+(?i)PLAY.Orange     Orange
+(?i)play            PLAY
+(?i)orange          Orange
+(?i)T-?Mobile       T-Mobile
+(?i)plus            Plus
+(?i)Era             Era
+(?i)Lyca            Lycamobile
+(?i)Aero2           Aero2
+(?i)Wifi            Wifi
+.*                  Other
+
+[ZA]
+(?i)MTN             MTN
+(?i)Vocacom         Vodacom
+(?i)Cell.?C         Cell_C
+(?i)Telkom          Telkom
+(?i)8ta             Telkom
+(?i)Virgin          Virgin
+(?i)Wifi            Wifi
+.*                    Other
+
+[IT]
+(?i)WIND            WIND
+(?i)vodafone        Vodafone
+(?i)Telenor         Telenor
+\d{2,}              Other
+3(?!G)              Tre
+(?i)PosteMobile     PosteMobile
+(?i)Telecom         Telecom
+(?i)TIM             Telecom
+(?i)Hutchi          Tre
+(?i)Fastweb         Tre
+(?i)Tiscali         Tiscali
+(?i)Movistar        Telefonica
+(?i)Wifi            Wifi
+.*                  Other
+
+[NL]
+(?i)KPN             KPN
+(?i)vodafone        Vodafone
+(?i)T-Mobile        T-Mobile
+(?i)Tele2           Tele2
+(?i)hollandsnieuwe  Vodafone
+(?i)Lycamobile      KPN
+(?i)Ben             T-Mobile
+(?i)Simpel          T-Mobile
+(?i)Ziggo           Vodafone
+(?i)Simyo           KPN
+(?i)Lebara          KPN
+(?i)Telfort         KPN
+(?i)Hi              KPN
+(?i)Delight         KPN
+(?i)Youfone         KPN
+(?i)Wifi            Wifi
+.*                  Other
+
+[DK]
+(?i)TDC             TDC
+(?i)Telia           Telia
+(?i)Telenor         Telenor
+\d{2,}              Other
+3(?!G)              Hi3G
+(?i)Telmore         TDC
+(?i)YouSee          TDC
+(?i)Wifi            Wifi
+.*                  Other
+
+[DE]
+(?i)Telekom         DeutscheTelekom
+(?i)Vodafone        Vodafone
+(?i)O2              Telefonica
+(?i)E-Plus          EPlus
+(?i)Medion          EPlus
+(?i)BASE            EPlus
+(?i)Drillisch       Drillisch
+(?i)Wifi            Wifi
+.*                  Other
+
+[MX]
+(?i)Wifi            Wifi
+.*                  Other
+
+[BE]
+(?i)Proximus        Proximus
+(?i)Mobistar        Mobistar
+(?i)Telenet         Mobistar
+(?i)Scarlet         Proximus
+(?i)BASE            BASE
+(?i)Viking          BASE
+(?i)JIM             BASE
+(?i)Wifi            Wifi
+.*                  Other
+
+[TW]
+(?i)Wifi            Wifi
+.*                  Other
+
+[UK]
+(?i)EE              EE
+(?i)O2              O2
+(?i)Three           Three
+^3(?!G)             Three
+(?i)giffgaff        O2
+(?i)Tesco           O2
+(?i)Virgin          EE
+(?i)BT              EE
+(?i)Vodafone        Vodafone
+(?i)Wifi            Wifi
+.*                  Other

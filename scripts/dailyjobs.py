@@ -3,24 +3,22 @@ import time
 from datetime import datetime
 from argparse import ArgumentParser
 
-from apteligentimporter import (setuplogger,
-                                Config,
-                                Blacklist,
-                                REST_API,
-                                CarbonSink)
+from libecgnoc import (logger,
+                       jsonstore,
+                       textstore)
 
-from apteligentimporter.schedule import Event, ClockBasedScheduler
+from libecgnoc.schedule import Event, ClockBasedScheduler
 
-metric_root = None
+import tographite
+import apteligent
 
 
-def dailystats(appid, cc, gp):
+def dailystats(metric_root, appid, at, gp):
     """
     Retreive daily stats of an app based on appid. Only the data of a complete
     day, in other words
     yesterday, will be stored
     """
-    global metric_root
     # Calculating 'yesterday' turned out to be a challenge.
     # I settled on using the ordinal value of the date. The python
     # documentation is not clear on what this is,
@@ -29,7 +27,7 @@ def dailystats(appid, cc, gp):
     # different timezones.
     yesterday = datetime.today().toordinal() - 1
     timestamp = time.mktime(datetime.fromordinal(yesterday).timetuple())
-    apps = cc.get_apps()
+    apps = at.get_apps()
 
     # If we want to stop tracking a metric remove it below.
     metrics = ['crashPercent', 'mau', 'dau', 'rating', 'appLoads', 'crashes',
@@ -42,7 +40,7 @@ def dailystats(appid, cc, gp):
         # the running day.
         # Request the data for two days and only use yesterdays value to track
         # the completed days.
-        stat = cc.errorMonitoringGraph(appid=appid, metric=metric,
+        stat = at.errorMonitoringGraph(appid=appid, metric=metric,
                                        duration=2880)
         try:
             value = stat['data']['series'][0]['points'][0]
@@ -54,19 +52,20 @@ def dailystats(appid, cc, gp):
     gp.flush_buffer()
 
 
-def main():
+def main(project):
 
-    apteligentconf = Config('apteligent')
-    graphiteconf = Config('graphite')
-    app_timezones = Config('app_timezones')
-    app_blacklist = Blacklist('app')
+    config = jsonstore.config(project)
+    blacklist = textstore.blacklist(project)
+    apteligentconf = config('apteligent')
+    graphiteconf = config('graphite')
+    app_timezones = config('app_timezones')
+    app_blacklist = blacklist('app')
 
-    global metric_root
     try:
         metric_root = apteligentconf.data.pop('metric_root')
-        cc = REST_API(**apteligentconf.data)
-        gp = CarbonSink(**graphiteconf.data)
-    except TypeError:
+        at = apteligent.restapi.Client(project, **apteligentconf.data)
+        gp = tographite.CarbonSink(**graphiteconf.data)
+    except (KeyError, TypeError):
         log.exception('The json configuration files contains an improper key.')
         raise
     log.info('Scheduling jobs')
@@ -82,11 +81,14 @@ def main():
         log.debug('App %s with appid %s, countrycode: %s, has GMT offset: %s',
                   appname, appid, country, timezone)
         if timezone < 0:
-            event = Event(0-timezone, 5, dailystats, appid, cc, gp)
+            event = Event(0-timezone, 5, dailystats,
+                          metric_root, appid, at, gp)
         elif timezone > 0:
-            event = Event(24-timezone, 5, dailystats, appid, cc, gp)
+            event = Event(24-timezone, 5, dailystats,
+                          metric_root, appid, at, gp)
         elif timezone == 0:
-            event = Event(0, 5, dailystats, appid, cc, gp)
+            event = Event(0, 5, dailystats,
+                          metric_root, appid, at, gp)
         else:
             log.error('App %s with appid: %s,'
                       'has no timezone configured as GMT offset.',
@@ -95,19 +97,23 @@ def main():
 
         scheduler.addevent(event)
 
-    scheduler.addevent(Event(1, 0, cc.new_token))
-    scheduler.addevent(Event(6, 0, cc.new_apps))
+    scheduler.addevent(Event(1, 0, at.new_token))
+    scheduler.addevent(Event(6, 0, at.new_apps))
+    log.info('Starting schedule with %d jobs', len(scheduler.events))
     scheduler.run()
 
 
 if __name__ == "__main__":
 
     parser = ArgumentParser(description=__doc__)
+    parser.add_argument("-p", "--project", dest="project",
+                        default="apteligent-importer",
+                        help="Project name")
     parser.add_argument("-q", "--quiet", action="store_false",
                         dest="verbose", default=True,
                         help="Suppress debug level log messages")
     args = parser.parse_args()
 
-    log = setuplogger(__file__, debug=args.verbose)
+    log = logger.setup(args.project, __file__, debug=args.verbose)
 
-    main()
+    main(args.project)

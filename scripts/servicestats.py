@@ -3,28 +3,26 @@
 Import the web service performance stats from apteligent REST API
 into graphite.
 '''
-from apteligentimporter import (setuplogger,
-                                apteligent,
-                                graphite,
-                                schedule,
-                                Config,
-                                Whitelist,
-                                RequestException)
+
+from libecgnoc import (logger,
+                       schedule,
+                       jsonstore,
+                       textstore)
+
+import apteligent
+import tographite
+
 
 import time
-# import concurrent.futures
 from argparse import ArgumentParser
 
-metric_root = None
-
-services_whitelist = Whitelist('services')
+services_whitelist = None
 
 
-def import_servicestats(cc, gp):
+def import_servicestats(metric_root, at, gp):
     """
     Stats on web services including ecg api services.
     """
-    global metric_root
     failures = list()
 
     # These are the available parameters of the apteligent REST_API
@@ -33,17 +31,17 @@ def import_servicestats(cc, gp):
     # filterKeys = ['appVersion', 'carrier', 'device', 'os', 'service']
     # groupBy = ['appId', 'appVersion', 'carrier', 'device', 'os', 'service']
 
-    apps = cc.get_apps()
+    apps = at.get_apps()
     for appId in apps:
         appName = apps[appId]['appName']
         prefix = [metric_root, appName, 'services']
         for metric in metrics:
             try:
-                data = cc.performanceManagementPie(appids=[appId],
+                data = at.performanceManagementPie(appids=[appId],
                                                    metric=metric,
                                                    groupby='service')
-            except RequestException:
-                log.error('Failed to get %s for %s.', metric, appId)
+            except:
+                log.exception('Failed to get %s for %s.', metric, appId)
                 failures.append((prefix, appId, metric))
                 continue
             processdata(prefix, metric, data, gp)
@@ -65,14 +63,14 @@ def processdata(prefix, metric, data, gp):
                       dataslice['value'], timestamp)
 
 
-def retryfailures(cc, gp, failures):
+def retryfailures(at, gp, failures):
     """
     Failed requests are retried one time
     """
     log.info('Retrying %s failed apteligent requests.', len(failures))
     for prefix, appId, metric in failures:
         try:
-            data = cc.performanceManagementPie(appids=[appId],
+            data = at.performanceManagementPie(appids=[appId],
                                                metric=metric,
                                                groupby='service')
         except RequestException:
@@ -81,17 +79,20 @@ def retryfailures(cc, gp, failures):
         processdata(prefix, metric, data, gp)
 
 
-def main():
+def main(project):
 
-    apteligentconf = Config('apteligent')
-    graphiteconf = Config('graphite')
+    config = jsonstore.config(project)
 
-    global metric_root
+    apteligentconf = config('apteligent')
+    graphiteconf = config('graphite')
+
+    global services_whitelist
+    services_whitelist = textstore.whitelist(project, 'services')
 
     try:
         metric_root = apteligentconf.data.pop('metric_root')
-        cc = apteligent.REST_API(**apteligentconf.data)
-        gp = graphite.CarbonSink(**graphiteconf.data)
+        at = apteligent.restapi.Client(project, **apteligentconf.data)
+        gp = tographite.CarbonSink(**graphiteconf.data)
     except TypeError:
         log.exception('The json configuration files contain an improper key.')
         raise
@@ -101,20 +102,23 @@ def main():
     while True:
         services_whitelist.refresh()
         sched.sleep_until_next_run()
-        failures = import_servicestats(cc, gp)
+        failures = import_servicestats(metric_root, at, gp)
         if failures:
             time.sleep(120)
-            retryfailures(cc, gp, failures)
+            retryfailures(at, gp, failures)
         gp.flush_buffer()
 
 if __name__ == "__main__":
 
     parser = ArgumentParser(description=__doc__)
+    parser.add_argument("-p", "--project", dest="project",
+                        default="apteligent-importer",
+                        help="Project name")
     parser.add_argument("-q", "--quiet", action="store_false",
                         dest="verbose", default=True,
                         help="Suppress debug level log messages")
     args = parser.parse_args()
 
-    log = setuplogger(__file__, debug=args.verbose)
+    log = logger.setup(args.project, __file__, debug=args.verbose)
 
-    main()
+    main(args.project)

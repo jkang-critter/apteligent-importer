@@ -1,0 +1,11 @@
+# Last updated: March 10, 2016
+#
+# Blacklist of every app we don't want to track. The crittercism App Id's are
+# used. They can be found in the crittercism web interface at each App's settings
+# panel. Alternatively you could look into the cached apps.json file.
+#
+# Please add a comment with the App Name before each AppID for clarity. Whitespace
+# is ignored.
+
+# Example blacklisted app
+778899aabbccddeeff001122

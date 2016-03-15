@@ -1,7 +1,7 @@
 import time
 import os
 import logging
-from apteligentimporter.resolvepaths import CONFIG_DIR
+from libecgnoc import resolvepaths
 
 log = logging.getLogger(__name__)
 
@@ -15,6 +15,7 @@ class Textstore(object):
         self.last_update = None
         if self.exists():
             self.load()
+        log.debug('%s at %s', name, path)
 
     def exists(self):
         return os.path.isfile(self.path)
@@ -33,7 +34,7 @@ class Textstore(object):
                 self.last_update = time.time()
                 self.as_set()
                 return self.data
-        except IOError, e:
+        except IOError as e:
             log.exception("Script failed to open %s\n %(e)s", self.path, e)
             raise
 
@@ -53,8 +54,8 @@ class Textstore(object):
 class Blacklist(Textstore):
     Extension = '.blacklist'
 
-    def __init__(self, name):
-        path = os.path.join(CONFIG_DIR, name + self.Extension)
+    def __init__(self, storagedir, name):
+        path = os.path.join(storagedir, name + self.Extension)
         super(Blacklist, self).__init__(name, path)
 
     def as_set(self):
@@ -71,13 +72,24 @@ class Blacklist(Textstore):
         return reject
 
 
+def blacklist(project, name=None):
+    path = resolvepaths.resolve(resolvepaths.CONFIG, project)
+
+    def creator(_name):
+        return Blacklist(path, _name)
+
+    if name:
+        return creator(name)
+    else:
+        return creator
+
+
 class Whitelist(Textstore):
     Extension = '.whitelist'
 
-    def __init__(self, name):
-        path = os.path.join(CONFIG_DIR, name + self.Extension)
+    def __init__(self, storagedir, name):
+        path = os.path.join(storagedir, name + self.Extension)
         super(Whitelist, self).__init__(name, path)
-
 
     def as_set(self):
         self.whitelist = set(self.data)
@@ -91,3 +103,15 @@ class Whitelist(Textstore):
             log.debug('REJECT: %s not in whitelist: %s', item, self.path)
 
         return allow
+
+
+def whitelist(project, name=None):
+    path = resolvepaths.resolve(resolvepaths.CONFIG, project)
+
+    def creator(_name):
+        return Whitelist(path, _name)
+
+    if name:
+        return creator(name)
+    else:
+        return creator

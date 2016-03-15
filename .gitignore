@@ -1,3 +1,15 @@
+# autocreated by setup.py
+MANIFEST
+# virtualenv
+venv
+# Mac specific
+.DS_Store
+#vim swp files
+*.swp
+
+
+# Standard python gitignore from github below
+# -------------------------------------------
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

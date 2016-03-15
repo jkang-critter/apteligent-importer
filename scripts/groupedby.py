@@ -6,32 +6,25 @@ store it into graphite.
 import time
 from argparse import ArgumentParser
 
-from apteligentimporter import (setuplogger,
-                                Config,
-                                apteligent,
-                                graphite,
-                                schedule,
-                                groupmap)
+from libecgnoc import (logger,
+                       jsonstore,
+                       schedule)
 
-metric_root = None
-quit = False
+from libecgnoc.groupmap import groupmap
 
-app_countries = None
-carriers_per_country = None
+import apteligent
+import tographite
 
 
-def groupedby_carrier(cc, gp):
+def groupedby_carrier(app_countries, carriers_per_country,
+                      metric_root, at, gp):
     """
     For all the tracked apps get the Crittercism metrics per version of the app
     """
 
     metrics = ['crashes', 'crashPercent', 'appLoads']
 
-    global metric_root  # Use the global variable metric_root
-    global quit  # Only way to catch a KeyboardInterrupt in a threaded app.
-    if quit:
-        raise KeyboardInterrupt
-    apps = cc.get_apps()
+    apps = at.get_apps()
     appids = apps.keys()
     # If we want to stop tracking a certain metric remove it below.
     for metric in metrics:
@@ -48,7 +41,7 @@ def groupedby_carrier(cc, gp):
 
             timestamp = time.time()
             prefix = [metric_root, appName, 'groupedby', 'carrier']
-            stats = cc.errorMonitoringPie(appid=appid, metric=metric,
+            stats = at.errorMonitoringPie(appid=appid, metric=metric,
                                           groupby='carrier')
             try:
                 slices = stats['data']['slices']
@@ -70,29 +63,24 @@ def groupedby_carrier(cc, gp):
     gp.flush_buffer()
 
 
-def groupedby_appversion(cc, gp):
+def groupedby_appversion(metric_root, at, gp):
     """
     For all the tracked apps get the Crittercism metrics per version of the app
     """
 
+    # If we want to stop tracking a certain metric remove it below.
     metrics = ['dau', 'appLoads', 'crashes', 'crashPercent',
                'affectedUsers', 'affectedUserPercent']
 
-    global metric_root  # Use the global variable metric_root
-    global quit  # Only way to catch a KeyboardInterrupt in a threaded app.
-    if quit:
-        raise KeyboardInterrupt
-    apps = cc.get_apps()
+    apps = at.get_apps()
     appids = apps.keys()
-    # If we want to stop tracking a certain metric remove it below.
+
     for metric in metrics:
         for appid in appids:
-            if quit:
-                raise KeyboardInterrupt
             appName = apps[appid]['appName']
             timestamp = time.time()
             prefix = [metric_root, appName, 'groupedby', 'appversion']
-            stats = cc.errorMonitoringPie(appid=appid, metric=metric,
+            stats = at.errorMonitoringPie(appid=appid, metric=metric,
                                           groupby='appVersion')
             try:
                 slices = stats['data']['slices']
@@ -109,22 +97,19 @@ def groupedby_appversion(cc, gp):
     gp.flush_buffer()
 
 
-def main():
+def main(project):
 
-    apteligentconf = Config('apteligent')
-    graphiteconf = Config('graphite')
+    config = jsonstore.config(project)
 
-    global metric_root
-    global app_countries
-    global carriers_per_country
-
-    app_countries = Config('app_timezones').data
-    carriers_per_country = groupmap.Groupmap('carrier')
+    apteligentconf = config('apteligent')
+    graphiteconf = config('graphite')
+    app_countries = config('app_timezones').data
+    carriers_per_country = groupmap(project, 'carrier')
 
     try:
         metric_root = apteligentconf.data.pop('metric_root')
-        cc = apteligent.REST_API(**apteligentconf.data)
-        gp = graphite.CarbonSink(**graphiteconf.data)
+        at = apteligent.restapi.Client(project, **apteligentconf.data)
+        gp = tographite.CarbonSink(**graphiteconf.data)
     except TypeError:
         log.exception('The json configuration files contains an improper key.')
         raise
@@ -135,21 +120,23 @@ def main():
     event = schedule.Event
 
     # Pull in stats grouped by app version every 10 minutes
-    sched.addevent(event('*',  0, groupedby_appversion, cc, gp))
-    sched.addevent(event('*', 10, groupedby_appversion, cc, gp))
-    sched.addevent(event('*', 20, groupedby_appversion, cc, gp))
-    sched.addevent(event('*', 30, groupedby_appversion, cc, gp))
-    sched.addevent(event('*', 40, groupedby_appversion, cc, gp))
-    sched.addevent(event('*', 50, groupedby_appversion, cc, gp))
+    vargs = [metric_root, at, gp]
+    sched.addevent(event('*',  0, groupedby_appversion, *vargs))
+    sched.addevent(event('*', 10, groupedby_appversion, *vargs))
+    sched.addevent(event('*', 20, groupedby_appversion, *vargs))
+    sched.addevent(event('*', 30, groupedby_appversion, *vargs))
+    sched.addevent(event('*', 40, groupedby_appversion, *vargs))
+    sched.addevent(event('*', 50, groupedby_appversion, *vargs))
 
     # Pull in stats grouped by carrier every 10 minutes starting from 2
     # past the whole hour
-    sched.addevent(event('*',  2, groupedby_carrier, cc, gp))
-    sched.addevent(event('*', 12, groupedby_carrier, cc, gp))
-    sched.addevent(event('*', 22, groupedby_carrier, cc, gp))
-    sched.addevent(event('*', 32, groupedby_carrier, cc, gp))
-    sched.addevent(event('*', 42, groupedby_carrier, cc, gp))
-    sched.addevent(event('*', 52, groupedby_carrier, cc, gp))
+    cargs = [app_countries, carriers_per_country, metric_root, at, gp]
+    sched.addevent(event('*',  2, groupedby_carrier, *cargs))
+    sched.addevent(event('*', 12, groupedby_carrier, *cargs))
+    sched.addevent(event('*', 22, groupedby_carrier, *cargs))
+    sched.addevent(event('*', 32, groupedby_carrier, *cargs))
+    sched.addevent(event('*', 42, groupedby_carrier, *cargs))
+    sched.addevent(event('*', 52, groupedby_carrier, *cargs))
 
     sched.run()
 
@@ -157,15 +144,14 @@ def main():
 if __name__ == "__main__":
 
     parser = ArgumentParser(description=__doc__)
+    parser.add_argument("-p", "--project", dest="project",
+                        default="apteligent-importer",
+                        help="Project name")
     parser.add_argument("-q", "--quiet", action="store_false",
                         dest="verbose", default=True,
                         help="Suppress debug level log messages")
     args = parser.parse_args()
 
-    log = setuplogger(__file__, debug=args.verbose)
+    log = logger.setup(args.project, __file__, debug=args.verbose)
 
-    try:
-        main()
-    except KeyboardInterrupt:
-        quit = True
-        raise
+    main(args.project)

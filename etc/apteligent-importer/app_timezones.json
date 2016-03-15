@@ -1,0 +1,8 @@
+{
+    "replace with appid": [
+        "replace with appname",
+        -8, "<- replace with configured GMT offset and remove this comment."
+    ],
+    "repeat for each app"
+
+}

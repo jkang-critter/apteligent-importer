@@ -2,8 +2,6 @@ import logging
 import pickle
 import struct
 import socket
-import uuid
-from apteligentimporter.jsonstore import Cache
 from collections import deque
 from string import maketrans
 import pprint
@@ -116,16 +114,17 @@ class CarbonSink(object):
 
         log.debug(pp.pformat(lst))
         if self.protocol == 'pickle':
-            payload = pickle.dumps(lst, 2) # Setting protocol 2 as carbon is python2 only (march 2016).
+            # Use pickle protocol 2 as carbon is python2 only (march 2016)
+            payload = pickle.dumps(lst, 2)
             header = struct.pack("!L", len(payload))
             message = header + payload
-        elif self.protocol == 'plain':
+        elif self.protocol == 'plain' or self.protocol == 'dummy':
             message = '\n'.join(
                 ['{0[0]} {0[1][1]} {0[1][0]}'.format(metric)
                     for metric in lst])
-            log.debug(message)
-        elif self.protocol == 'dummy':
-            return
+            if self.protocol == 'dummy':
+                log.info(message)
+                return
         else:
             log.warning('Graphite protocol unknown: %s', self.protocol)
             raise ValueError('Graphite protocol unknown')
@@ -133,12 +132,9 @@ class CarbonSink(object):
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect(self.connection)
             s.sendall(message)
-        except socket.error as e:
-            log.error('Failed to send data to graphite.\n%s', e)
-            c = Cache(str(uuid.uuid1()))
-            c.data = lst
-            c.store()
-            log.info('Buffer flushed to json cache: %s', c.path)
+        except socket.error:
+            log.exception('Failed to send data to graphite.')
+            log.critical(pp.pformat(lst))
         else:
             log.info('%s metrics succesfully sent to graphite.', len(lst))
         finally:
