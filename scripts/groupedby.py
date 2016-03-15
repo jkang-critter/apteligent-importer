@@ -29,8 +29,6 @@ def groupedby_carrier(app_countries, carriers_per_country,
     # If we want to stop tracking a certain metric remove it below.
     for metric in metrics:
         for appid in appids:
-            if quit:
-                raise KeyboardInterrupt
             appName = apps[appid]['appName']
             try:
                 country = app_countries[appid][2]
