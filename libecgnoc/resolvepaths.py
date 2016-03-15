@@ -24,10 +24,10 @@ def resolve(function, project):
     elif function == LOG:
         dirs = [os.getenv('LOG_DIR', False),
                 os.path.join(os.getcwd(), 'log'),
-                '/var/log/apteligentimporter',
+                os.path.join('/var/log', project),
                 '/tmp']
     else:
-        raise RuntimeError('function should be resolve.paths.CONFG,'
+        raise RuntimeError('function should be resolve.paths.CONFIG,'
                            'resolvepaths.CACHE or resolvepaths.LOG')
 
     for candidate in dirs:
