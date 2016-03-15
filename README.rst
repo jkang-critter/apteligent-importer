@@ -24,8 +24,8 @@ but a port to python3 compatible code is in the works. To set up a dev environme
 5. Install all the packages as editable into this environment.
     ``pip install -e .``
 6. Create a hidden directory named after the project in you home directory and move all examples configuration.
-    ``mkdir ~/.apteligent-importer``
-    ``mv etc/apteligent-importer/* ~/.apteligent-importer``
+    | ``mkdir ~/.apteligent-importer``
+    | ``mv etc/apteligent-importer/* ~/.apteligent-importer``
 7. Adapt the configuration to your liking.
 8. Run any of the installed scripts.
 
@@ -37,19 +37,24 @@ There is no clear cut way how to set up an production environment. At eCG NOC we
 `dh-virtualenv` and handle configuration with puppet. You will need an ubuntu or debian build host to create the
 packages. If all build dependencies of `dh-virtualenv` and python are met, building is easy:
 
-1. Add a changelog entry:
-    ``dch``
-2. Build an unsigned package:
+1. Check if all build dependencies are met.
+   ``dpkg-checkbuilddeps``
+2. Add a changelog entry in debian/changelog manually or use ``dch`` from the _devscripts_ package.
+3. Build an unsigned package:
     ``dpkg-buildpackage -us -uc``
 
-In production the following directories are expected to be present and accessible to the user running the scripts:
-`
-    Configuration: /etc/<project-name>
-    Cache: /var/cache/<project-name>
-    Logs: /var/log/<project-name>
-`
-Where <project-name> is either *apteligent-importer* or set by the -p switch for each script. Each directory can be
-overridden individually with an enviroment variable: `CONFIG_DIR`, `CACHE_DIR` and `LOG_DIR`.
+In production the following directories are expected to be present and accessible to the user running the scripts
+
+    =============  ========================  ====================
+    Function       Directory                 Environment Variable
+    =============  ========================  ====================
+    Configuration  ``/etc/<project>``        `CONFIG_DIR`
+    Cache          ``/var/cache/<project>``  `CACHE_DIR`
+    Logs           ``/var/log/<project>``    `LOG_DIR`
+    =============  ========================  ====================
+
+Where <project> is either *apteligent-importer* or set by the -p switch for each script. Each directory can be
+overridden individually with an enviroment variable.
 
 It is recommended to run the scripts under a service manager like supervisord or monit.
 

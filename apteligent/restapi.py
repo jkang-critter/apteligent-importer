@@ -6,7 +6,7 @@ from libecgnoc import jsonstore
 from libecgnoc import textstore
 
 # This suppresses warnings on versions of python below 2.7.9
-# requests.packages.urllib3.disable_warnings()
+requests.packages.urllib3.disable_warnings()
 
 log = logging.getLogger(__name__)
 

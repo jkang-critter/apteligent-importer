@@ -14,7 +14,7 @@ setup(
     long_description=readme(),
     author="Paul Frederiks",
     author_email="pfrederiks@ebay.com",
-    version='0.1.1',
+    version='0.2',
     classifiers=[
         'Programming Language :: Python :: 2.7'
         ],
