@@ -1,11 +1,11 @@
 # Last updated November 4, 2015
 #
 # Every service we want to track should be included into this whitelist.
-# In the crittercism-servicestats.log you can find rejected and allowed services
+# In the servicestats.log you can find rejected and allowed services
 # by grepping for REJECT or ALLOW as long as debugging is enabled.
 # example to get list of rejected services:
 #
-# grep REJECT crittercism-servicestats.log| awk '{ print $7 }'|sort|uniq
+# grep REJECT servicestats.log| awk '{ print $7 }'|sort|uniq
 #
 # Comments should start with a #-sign. Whitespace is ignored. I would like to
 # keep this list in alphabetical order. Wildcards are not supported
