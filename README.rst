@@ -46,7 +46,7 @@ packages. If all build dependencies of `dh-virtualenv` and python are met, build
 In production the following directories are expected to be present and accessible to the user running the scripts
 
     =============  ========================  ====================
-    Function       Directory                 Environment Variable
+       Function            Directory         Environment Variable
     =============  ========================  ====================
     Configuration  ``/etc/<project>``        `CONFIG_DIR`
     Cache          ``/var/cache/<project>``  `CACHE_DIR`

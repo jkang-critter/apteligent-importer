@@ -1,4 +1,4 @@
 include LICENSE
 include README.rst
-graft etc/apteligent-importer
+graft conf
 graft debian
