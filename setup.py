@@ -18,7 +18,7 @@ setup(
     author_email=EMAIL,
     maintainer=AUTHOR,
     maintainer_email=EMAIL,
-    version='0.4',
+    version='0.5',
     classifiers=[
         'Programming Language :: Python :: 2.7'
         ],
@@ -28,12 +28,12 @@ setup(
         'scripts/dailyjobs.py',
         'scripts/livestats.py',
         'scripts/servicestats.py',
-        'scripts/groupedby.py',
-        'scripts/pingdom.py'
+        'scripts/groupedby.py'
         ],
-    license='TBD',
+    license='MIT',
     install_requires=[
         'requests>=2.7.0',
+        'requests[security]>=2.7.0',
         'futures>=3.0.3'
         ]
 )
