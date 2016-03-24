@@ -1,3 +1,4 @@
+import sys
 from setuptools import setup
 
 AUTHOR = "Paul Frederiks"
@@ -6,8 +7,25 @@ DESCRIPTION = "Import Apteligent data to graphite"
 
 
 def readme():
+    """Return the README.rst file to include as long description"""
     with open('README.rst') as f:
         return f.read()
+
+
+def requirements():
+    """Return different requirements depending on python version"""
+    install_requires = ['requests>=2.7.0', 'six']
+    v = sys.version_info
+    if v.major == 2:
+        # Install backport of concurrent.futures fo python 2
+        install_requires.append('futures>=3.0.5')
+        if v.minor == 7 and v.micro < 9:
+            # python requests regards SSL of python < 2.7.9 as insecure
+            # It's optional security requirements install pyOpenSSL and
+            # more as an alernative
+            install_requires.append('requests[security]>=2.7.0')
+
+    return install_requires
 
 
 setup(
@@ -20,7 +38,16 @@ setup(
     maintainer_email=EMAIL,
     version='0.5',
     classifiers=[
-        'Programming Language :: Python :: 2.7'
+        'Development Status :: 5 - Production/Stable',
+        'License :: OSI Approved :: MIT License',
+        'Operating System :: POSIX',
+        'Programming Language :: Python',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'Topic :: System :: Monitoring'
         ],
     keywords='graphite apteligent crittercism mobile',
     packages=['apteligent', 'tographite', 'libecgnoc'],
@@ -31,9 +58,5 @@ setup(
         'scripts/groupedby.py'
         ],
     license='MIT',
-    install_requires=[
-        'requests>=2.7.0',
-        'requests[security]>=2.7.0',
-        'futures>=3.0.3'
-        ]
+    install_requires=requirements()
 )
