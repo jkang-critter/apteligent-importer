@@ -25,7 +25,7 @@ def groupedby_carrier(app_countries, carriers_per_country,
     metrics = ['crashes', 'crashPercent', 'appLoads']
 
     apps = at.get_apps()
-    appids = apps.keys()
+    appids = list(apps.keys())
     # If we want to stop tracking a certain metric remove it below.
     for metric in metrics:
         for appid in appids:
@@ -50,7 +50,7 @@ def groupedby_carrier(app_countries, carriers_per_country,
                     value = sl['value']
                     aggregator[group] = aggregator.get(group, 0) + value
 
-                for group, value in aggregator.iteritems():
+                for group, value in aggregator.items():
                     path = prefix + [group, metric]
                     gp.submit(path, value, timestamp)
 
@@ -71,7 +71,7 @@ def groupedby_appversion(metric_root, at, gp):
                'affectedUsers', 'affectedUserPercent']
 
     apps = at.get_apps()
-    appids = apps.keys()
+    appids = list(apps.keys())
 
     for metric in metrics:
         for appid in appids:

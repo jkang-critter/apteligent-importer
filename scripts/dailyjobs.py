@@ -74,7 +74,7 @@ def main(project):
     # Because the configured timezone determines the time the Crittercism
     # counters are reset,
     # we need to schedule the retreival of the data  based on this.
-    for appid, (appname, timezone, country) in app_timezones.data.iteritems():
+    for appid, (appname, timezone, country) in app_timezones.data.items():
         # skip apps in the blacklist
         if appid in app_blacklist:
             continue

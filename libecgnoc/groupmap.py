@@ -1,4 +1,7 @@
 from __future__ import absolute_import
+from builtins import next
+from builtins import str
+from builtins import object
 import logging
 import re
 import os
@@ -130,7 +133,7 @@ class Groupmap(object):
 
     def __str__(self):
         builder = ""
-        for groups in self.data.itervalues():
+        for groups in self.data.values():
             builder += str(groups)
             builder += '\n'
         return builder

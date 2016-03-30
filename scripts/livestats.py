@@ -2,7 +2,6 @@
 '''
 Script to import the apteligent livestats out of the current beta API.
 '''
-
 from libecgnoc import (logger,
                        schedule,
                        jsonstore)
@@ -13,8 +12,6 @@ import apteligent
 import time
 import concurrent.futures
 from argparse import ArgumentParser
-
-metric_root = None
 
 
 def import_livestats(metric_root, at, gp, appids):
@@ -45,7 +42,7 @@ def import_livestats(metric_root, at, gp, appids):
                 # of seconds.
                 # To add insult to injury, the smallest interval returned by
                 # the api is 10 seconds
-                timestamp = int(stat['time']/1000)
+                timestamp = stat['time']//1000
                 gp.submit(prefix + ['appLoads'], stat['app_loads'], timestamp)
                 gp.submit(prefix + ['crashes'], stat['app_errors'], timestamp)
                 gp.submit(prefix + ['exceptions'], stat['app_exceptions'],
@@ -73,7 +70,7 @@ def main(project):
     while True:
         sched.sleep_until_next_run()
         start = time.time()
-        appids = at.get_apps().keys()
+        appids = list(at.get_apps().keys())
         failures = import_livestats(metric_root, at, gp, appids)
         if failures:
             log.info('Retrying %s failed requests', len(failures))
@@ -81,13 +78,13 @@ def main(project):
             if failures:
                 log.info('Giving up.... %s failed requests', len(failures))
             else:
-                log.info('Retry suatessful')
+                log.info('Retry successful')
 
         gp.flush_buffer()
 
         duration = time.time() - start
         if duration > 10:
-            log.error('It took longer to retrieve the livestats than'
+            log.error('It took longer to retrieve the livestats than '
                       'the 10 second bucket. Duration: %s seconds.', duration)
         else:
             log.debug('End of run. Duration: %s seconds', duration)

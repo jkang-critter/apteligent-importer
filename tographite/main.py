@@ -1,22 +1,26 @@
+from builtins import range
+from builtins import object
 import logging
 import pickle
 import struct
 import socket
-from collections import deque
-from string import maketrans
 import pprint
+from collections import deque
 
 log = logging.getLogger(__name__)
-
-pp = pprint.PrettyPrinter(indent=2, width=200)
 
 # Special characters are not supported for use in graphite expressions.
 # delchars contains all the characters to remove from a metric path
 delchars = '(){}[]!"#$%&\'*+/<=>?@\\^`|~\t\n\r\x0b\x0c'
 # Dots create a new directory in whisperdb. They are replaced with a dash.
 # Spaces, commas, parentheses are problematic, we replace them with underscores
-transtable = maketrans('. ,/:;',
-                       '-_____')
+inchars = '. ,/:;'
+ouchars = '-_____'
+
+
+transtable = {ord(a): ord(b) for a, b in zip(inchars, ouchars)}
+deltable = {ord(d): None for d in delchars}
+transtable.update(deltable)
 
 
 def sanitize(metric):
@@ -24,20 +28,17 @@ def sanitize(metric):
     if type(metric) == list:
             l = list()
             for m in metric:
-                if isinstance(m, unicode):
-                    l.append(
-                        m.encode('ascii', 'ignore')
-                        .translate(transtable, delchars))
-                elif isinstance(m, str):
-                    l.append(m.translate(transtable, delchars))
+                try:
+                    l.append(m.translate(transtable))
+                except TypeError:
+                    l.append(m.decode().translate(transtable))
             metric = '.'.join(l)
-    elif isinstance(metric, str):
-        metric = metric.translate(None, delchars)
-    elif isinstance(metric, unicode):
-        metric = metric.encode('ascii', 'ignore').translate(None, delchars)
     else:
-        raise TypeError('Metric needs to be a list of path elements or a'
-                        'dotted path string.')
+        try:
+            metric = metric.translate(deltable)
+        except TypeError:
+            metric = metric.decode().translate(deltable)
+
     return metric
 
 
@@ -96,7 +97,7 @@ class CarbonSink(object):
         log.info('Flushing buffer to carbon daemon at %s:%s', self.host,
                  self.port)
         lst = list()
-        for i in xrange(self.max_buffer):
+        for i in range(self.max_buffer):
             try:
                 lst.append(self.buff.popleft())
             except IndexError:
@@ -112,7 +113,6 @@ class CarbonSink(object):
             log.info('flush_buffer called, but nothing to send to carbon')
             return
 
-        log.debug(pp.pformat(lst))
         if self.protocol == 'pickle':
             # Use pickle protocol 2 as carbon is python2 only (march 2016)
             payload = pickle.dumps(lst, 2)
@@ -120,8 +120,8 @@ class CarbonSink(object):
             message = header + payload
         elif self.protocol == 'plain' or self.protocol == 'dummy':
             message = '\n'.join(
-                ['{0[0]} {0[1][1]} {0[1][0]}'.format(metric)
-                    for metric in lst])
+                ('{0[0]} {0[1][1]} {0[1][0]}'.format(metric)
+                    for metric in lst))
             if self.protocol == 'dummy':
                 log.info(message)
                 return
@@ -134,7 +134,6 @@ class CarbonSink(object):
             s.sendall(message)
         except socket.error:
             log.exception('Failed to send data to graphite.')
-            log.critical(pp.pformat(lst))
         else:
             log.info('%s metrics succesfully sent to graphite.', len(lst))
         finally:

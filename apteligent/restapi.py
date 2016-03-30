@@ -1,3 +1,4 @@
+from builtins import object
 import json
 import time
 import requests
@@ -156,7 +157,8 @@ class Client(object):
     def app_filter(self, apps):
         self.app_blacklist.refresh()
         self.app_blacklist.as_set()
-        for appid in apps.keys():
+        appids = list(apps.keys())
+        for appid in appids:
             if appid in self.app_blacklist:
                 # remove blacklisted apps from list
                 del apps[appid]
@@ -212,7 +214,7 @@ class Client(object):
         duration, filterkey, filtervalue and groupby.
         """
         if appids is None:
-            appids = self.get_apps().keys()
+            appids = list(self.get_apps().keys())
         href = '/v1.0/performanceManagement/pie'
         url = 'https://' + self.hostname + href
         tokenstr = self.get_token()
@@ -276,7 +278,7 @@ class Client(object):
         parameters['params'] = {'graph': metric, 'duration': duration}
         if appid is None and appids is None:
             apps = self.get_apps()
-            appids = apps.keys()
+            appids = list(apps.keys())
             parameters['params']['appIds'] = appids
         elif appids is None:
             parameters['params']['appId'] = appid
@@ -301,7 +303,7 @@ class Client(object):
         return r.json()
 
     def livestats_totals(self, app_id, app_version):
-	"""
+        """
         API Call to the beta of Apteligent livestats. Returns the current
         totals of the day for the provided app_id.
         Arguments:

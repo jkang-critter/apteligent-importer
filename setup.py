@@ -14,11 +14,14 @@ def readme():
 
 def requirements():
     """Return different requirements depending on python version"""
-    install_requires = ['requests>=2.7.0', 'six']
+    install_requires = ['requests>=2.7.0']
     v = sys.version_info
     if v.major == 2:
         # Install backport of concurrent.futures fo python 2
         install_requires.append('futures>=3.0.5')
+        # Install future which is a compatibility layer for python 3 code
+        # on python 2 and should not be confused with futures...
+        install_requires.append('future>=0.15.2')
         if v.minor == 7 and v.micro < 9:
             # python requests regards SSL of python < 2.7.9 as insecure
             # It's optional security requirements install pyOpenSSL and
