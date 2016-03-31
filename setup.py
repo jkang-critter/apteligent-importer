@@ -39,7 +39,7 @@ setup(
     author_email=EMAIL,
     maintainer=AUTHOR,
     maintainer_email=EMAIL,
-    version='0.5',
+    version='0.6',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: MIT License',
