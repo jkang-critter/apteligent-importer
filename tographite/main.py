@@ -4,7 +4,7 @@ import logging
 import pickle
 import struct
 import socket
-from collections import deque
+from collections import deque, namedtuple
 
 log = logging.getLogger(__name__)
 
@@ -20,56 +20,56 @@ inchars = '. ,/:;'
 ouchars = '-_____'
 
 # Here I avoid the use of maketrans, because of python2 / python3 differences
-# for unicode a transtable is just a map of ordinals.
+# for unicode a transtable is just a map of ordinals to ordinals.
 transtable = {ord(a): ord(b) for a, b in zip(inchars, ouchars)}
 deltable = {ord(d): None for d in delchars}
 transtable.update(deltable)
 
+Metric = namedtuple('Metric', ['path', 'timestamp', 'value'])
 
-def sanitize(metric):
+
+def sanitize(path):
     """
     Sanitize the input metric paths and accepts lists or dot seperated strings.
-    Returns a dot separated string in unicode/ python 3 string. Bytes or python2
-    strings are decoded to unicode.
+    Returns a dot separated string in unicode/ python 3 string.
+    Bytes or python2 strings are decoded to unicode.
     """
 
-    if type(metric) == list:
+    if type(path) == list:
             l = list()
-            for m in metric:
+            for el in path:
                 try:
-                    l.append(m.translate(transtable))
+                    l.append(el.translate(transtable))
                 except TypeError:
-                    l.append(m.decode().translate(transtable))
-            metric = '.'.join(l)
+                    l.append(el.decode().translate(transtable))
+            path = '.'.join(l)
     else:
         try:
-            metric = metric.translate(deltable)
+            path = path.translate(deltable)
         except TypeError:
-            metric = metric.decode().translate(deltable)
+            path = path.decode().translate(deltable)
 
-    return metric
+    return path
 
 
 def plainmessage(metrics):
     """
     Return message conforming to the graphite line protocol
     """
-    def processtuple(tpl):
-        metric, (timestamp, value) = tpl
-        return '{metric} {value:g} {timestamp:.3f}'.format(**locals())
+    def processtuple(m):
+        return '{m.path} {m.value:g} {m.timestamp:.3f}'.format(**locals())
 
-    return '\n'.join([processtuple(tpl) for tpl in metrics])
+    return '\n'.join([processtuple(metric) for metric in metrics])
 
 
 def picklemessage(metrics):
     """
     Return message conforming to the graphite pickle protocol
     """
-    def processtuple(tpl):
-        metric, (timestamp, value) = tpl
-        return metric.encode('utf-8'), (float(timestamp), float(value))
+    def processtuple(m):
+        return m.path.encode('utf-8'), (float(m.timestamp), float(m.value))
 
-    lst = [processtuple(tpl) for tpl in metrics]
+    lst = [processtuple(metric) for metric in metrics]
 
     # Use pickle protocol 2 as carbon is python2 only (march 2016)
     payload = pickle.dumps(lst, 2)
@@ -106,24 +106,24 @@ class CarbonSink(object):
         self.protocol = protocol
         self.max_buffer = max_buffer
         # All metrics are buffered in a deque. This is a thread safe and more
-        # performant datastructure than using a plain list.
+        # performant datastructure than a plain list.
         self.buff = deque()
 
-    def submit(self, metric, value, timestamp):
+    def submit(self, path, value, timestamp):
         """
         Add a tuple in the form (metric, (timestamp, value)) to the deque
         self.buff
         When max_buffer is reached, flush the buffer to graphite.
         Arguments:
-        - metric is either a dotted string or a list representing the metric.
-        - value is a number representing the value. Will be cast to float.
+        - path is either a dotted string or a list representing the metric path
+        - value is a number representing the value. Will be cast to float
         - timestamp is a unix timestamps in seconds since epoch. Will be cast
         to float.
         """
-        metric = sanitize(metric)
-        message = metric, (timestamp, value)
+        path = sanitize(path)
+        metric = Metric(path, value, timestamp)
 
-        self.buff.append(message)
+        self.buff.append(metric)
         if len(self.buff) >= self.max_buffer:
             self.flush_buffer()
 
