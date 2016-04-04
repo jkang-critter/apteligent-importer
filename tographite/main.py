@@ -26,7 +26,7 @@ transtable = {ord(a): ord(b) for a, b in zip(inchars, ouchars)}
 deltable = {ord(d): None for d in delchars}
 transtable.update(deltable)
 
-Metric = namedtuple('Metric', ['path', 'timestamp', 'value'])
+Metric = namedtuple('Metric', ['path', 'value', 'timestamp'])
 
 
 def sanitize(path):
@@ -92,23 +92,25 @@ class CarbonSink(object):
         protocol: plain, pickle or dummy
         max_buffer: max size of the buffer (number of items in the list)
         """
-        if host and port:
-            log.info('Graphite connection created.\n Connection: %s:%s\n'
-                     'Protocol: %s\nMax buffer: %s', host, port, protocol,
-                     max_buffer)
-        else:
-            raise RuntimeError("Missing host and/or port arguments.Example:"
-                               "Graphite(host=localhost, port=2004,"
-                               "protocol='plain', max_buffer=100)")
+        def connection():
+            if host and port:
+                log.info('Graphite connection created.\n Connection: %s:%s\n'
+                         'Protocol: %s\nMax buffer: %s', host, port, protocol,
+                          max_buffer)
+                self.connection = (host, port)
+            else:
+                raise RuntimeError("Missing host and/or port arguments.Example:"
+                                   "Graphite(host=localhost, port=2004,"
+                                   "protocol='plain', max_buffer=100)")
 
-        self.connection = (host, port)
-        self.dummy = False
         if protocol == 'pickle':
+            connection()
             self._message = picklemessage
         elif protocol == 'plain':
+            connection()
             self._message = plainmessage
         elif protocol == 'dummy':
-            self.dummy = True
+            self.send = self._dummysend
             self._message = plainmessage
         else:
             raise ValueError('Unknown protocol: %s', protocol)
@@ -152,7 +154,6 @@ class CarbonSink(object):
                 log.info('Removed %s metrics from queue', i)
                 break
 
-
     def flush(self):
         """
         Flush all metrics found in the buffer to graphite until max_buffer is
@@ -163,11 +164,13 @@ class CarbonSink(object):
 
         message = self._message(buff)
 
-        if self.dummy:
-            log.info('Dummy protocol:\nSTARTDATA\n%s\nENDDATA', message)
-            return
-        else:
-            self.send(message)
+        self.send(message)
+
+    def _dummysend(self, message):
+        """
+        Record the message in the logs and discard it.
+        """
+        log.info('Dummy protocol:\nSTARTDATA\n%s\nENDDATA', message)
 
     def send(self, message):
         """
