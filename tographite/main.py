@@ -1,5 +1,6 @@
-from builtins import range
-from builtins import object
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from builtins import (object, zip)
 import logging
 import pickle
 import struct
@@ -59,7 +60,7 @@ def plainmessage(metrics):
     def processtuple(m):
         return '{m.path} {m.value:g} {m.timestamp:.3f}'.format(**locals())
 
-    return '\n'.join([processtuple(metric) for metric in metrics])
+    return '\n'.join(processtuple(metric) for metric in metrics)
 
 
 def picklemessage(metrics):
@@ -82,7 +83,7 @@ class CarbonSink(object):
     Submit data to carbon.
     """
 
-    def __init__(self, host=None, port=None, protocol=None, max_buffer=None):
+    def __init__(self, host=None, port=None, protocol='plain', max_buffer=500):
         """
         Initialize graphite object with empty buffer. Needs the following
         keyword arguments:
@@ -91,77 +92,87 @@ class CarbonSink(object):
         protocol: plain, pickle or dummy
         max_buffer: max size of the buffer (number of items in the list)
         """
-        if host and port and protocol and max_buffer:
+        if host and port:
             log.info('Graphite connection created.\n Connection: %s:%s\n'
                      'Protocol: %s\nMax buffer: %s', host, port, protocol,
                      max_buffer)
         else:
-            raise RuntimeError("Missing arguments. Example:"
-                               "Graphite(connection=(host, port),"
-                               "protocol='pickle'/'plain', max_buffer=100)")
+            raise RuntimeError("Missing host and/or port arguments.Example:"
+                               "Graphite(host=localhost, port=2004,"
+                               "protocol='plain', max_buffer=100)")
 
-        self.host = host
-        self.port = port
         self.connection = (host, port)
-        self.protocol = protocol
+        self.dummy = False
+        if protocol == 'pickle':
+            self._message = picklemessage
+        elif protocol == 'plain':
+            self._message = plainmessage
+        elif protocol == 'dummy':
+            self.dummy = True
+            self._message = plainmessage
+        else:
+            raise ValueError('Unknown protocol: %s', protocol)
+
         self.max_buffer = max_buffer
-        # All metrics are buffered in a deque. This is a thread safe and more
-        # performant datastructure than a plain list.
-        self.buff = deque()
+        if max_buffer > 500:
+            log.critical('max_buffer higher than 500 could hurt performance')
+
+        # All metrics are buffered in a deque. A deque is thread safe and supports
+        # fast pops and appends on both sides.
+        self._buff = deque()
 
     def submit(self, path, value, timestamp):
         """
         Add a tuple in the form (metric, (timestamp, value)) to the deque
-        self.buff
+        self._buff
         When max_buffer is reached, flush the buffer to graphite.
         Arguments:
         - path is either a dotted string or a list representing the metric path
-        - value is a number representing the value. Will be cast to float
-        - timestamp is a unix timestamps in seconds since epoch. Will be cast
-        to float.
+        - value is a number representing the value
+        - timestamp is a unix timestamps in seconds since epoch
         """
         path = sanitize(path)
         metric = Metric(path, value, timestamp)
 
-        self.buff.append(metric)
-        if len(self.buff) >= self.max_buffer:
+        self._buff.append(metric)
+        if len(self._buff) >= self.max_buffer:
             self.flush_buffer()
 
-    def flush_buffer(self):
+    def _buffgen(self):
+        """
+        Return a generator which returns Metric tuples from the buffer
+        until empty or max_buffer is reached. FIFO
+        """
+        i = 0
+        while i < self.max_buffer:
+            try:
+                yield self._buff.popleft()
+                i += 1
+            except IndexError:
+                log.info('Removed %s metrics from queue', i)
+                break
+
+
+    def flush(self):
         """
         Flush all metrics found in the buffer to graphite until max_buffer is
-        reached. Both the line protocol and the Pickle protocol are supported.
+        reached.
         """
-        log.info('Flushing buffer to carbon daemon at %s:%s', self.host,
-                 self.port)
-        lst = list()
-        for i in range(self.max_buffer):
-            try:
-                lst.append(self.buff.popleft())
-            except IndexError:
-                log.debug('Found %s metrics in queue', i+1)
-                break
-        # This else belongs to the for loop. It executes when it completes
-        # without encountering a break.
-        else:
-            log.debug('Will flush max number of metrics in queue: %s',
-                      self.max_buffer)
 
-        if not lst:
-            log.info('flush_buffer called, but nothing to send to carbon')
-            return
+        buff = self._buffgen()
 
-        if self.protocol == 'pickle':
-            message = picklemessage(lst)
-        elif self.protocol == 'plain':
-            message = plainmessage(lst).encode('utf-8')
-        elif self.protocol == 'dummy':
-            message = plainmessage(lst)
+        message = self._message(buff)
+
+        if self.dummy:
             log.info('Dummy protocol:\nSTARTDATA\n%s\nENDDATA', message)
             return
         else:
-            log.warning('Graphite protocol unknown: %s', self.protocol)
-            raise ValueError('Graphite protocol unknown')
+            self.send(message)
+
+    def send(self, message):
+        """
+        Open a socket and send a message to graphite.
+        """
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect(self.connection)
@@ -169,6 +180,6 @@ class CarbonSink(object):
         except socket.error:
             log.exception('Failed to send data to graphite.')
         else:
-            log.info('%s metrics succesfully sent to graphite.', len(lst))
+            log.info('Metrics succesfully sent to graphite.')
         finally:
             s.close()
