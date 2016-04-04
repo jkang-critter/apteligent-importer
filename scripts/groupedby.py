@@ -58,7 +58,7 @@ def groupedby_carrier(app_countries, carriers_per_country,
                 log.error('No data for metric: %s app: %s',
                           metric, appName, exc_info=True)
 
-    gp.flush_buffer()
+    gp.flush()
 
 
 def groupedby_appversion(metric_root, at, gp):
@@ -92,7 +92,7 @@ def groupedby_appversion(metric_root, at, gp):
                 log.error('No data for metric: %s app: %s',
                           metric, appName, exc_info=True)
 
-    gp.flush_buffer()
+    gp.flush()
 
 
 def main(project):

@@ -80,7 +80,7 @@ def main(project):
             else:
                 log.info('Retry successful')
 
-        gp.flush_buffer()
+        gp.flush()
 
         duration = time.time() - start
         if duration > 10:

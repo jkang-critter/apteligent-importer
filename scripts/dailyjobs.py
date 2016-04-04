@@ -49,7 +49,7 @@ def dailystats(metric_root, appid, at, gp):
         else:
             gp.submit(path, value, timestamp)
 
-    gp.flush_buffer()
+    gp.flush()
 
 
 def main(project):

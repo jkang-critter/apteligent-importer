@@ -106,7 +106,7 @@ def main(project):
         if failures:
             time.sleep(120)
             retryfailures(at, gp, failures)
-        gp.flush_buffer()
+        gp.flush()
 
 if __name__ == "__main__":
 
