@@ -138,7 +138,7 @@ class CarbonSink(object):
 
         self._buff.append(metric)
         if len(self._buff) >= self.max_buffer:
-            self.flush_buffer()
+            self.flush()
 
     def _buffgen(self):
         """
