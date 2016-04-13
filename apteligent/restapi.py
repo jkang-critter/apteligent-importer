@@ -168,20 +168,6 @@ class Client(object):
 
         return apps
 
-    def get_dailystats(self):
-
-        log.info('Retrieving daily stats')
-
-        tracked_attributes = ['appName',
-                              'crashPercent',
-                              'latency',
-                              'mau',
-                              'dau',
-                              'rating']
-
-        apps = self.__get_apps(tracked_attributes)
-        return self.app_filter(apps)
-
     def __get_apps(self, tracked_attributes):
         tokenstr = self.get_token()
         path = '/v1.0/apps'
@@ -205,6 +191,21 @@ class Client(object):
         apps = r.json()
         log.info("Number of apps: %s", len(apps))
         return apps
+
+    def get_dailystats(self):
+
+        log.info('Retrieving daily stats')
+
+        tracked_attributes = ['appName',
+                              'crashPercent',
+                              'latency',
+                              'mau',
+                              'dau',
+                              'rating']
+
+        apps = self.__get_apps(tracked_attributes)
+        return self.app_filter(apps)
+
 
     def performanceManagementPie(self, appids=None, duration=15,
                                  metric='volume', filterkey=None,
