@@ -39,7 +39,7 @@ setup(
     author_email=EMAIL,
     maintainer=AUTHOR,
     maintainer_email=EMAIL,
-    version='0.6',
+    version='0.7',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: MIT License',
@@ -57,6 +57,7 @@ setup(
     scripts=[
         'scripts/dailyjobs.py',
         'scripts/livestats.py',
+        'scripts/1mlivestats.py',
         'scripts/servicestats.py',
         'scripts/groupedby.py'
         ],
