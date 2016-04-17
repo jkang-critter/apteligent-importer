@@ -31,7 +31,7 @@ class Livestats(object):
                 app_id = future_to_app_id[future]
                 app_name = self.at.appname(app_id)
                 prefix = [self.metric_root, app_name, 'live']
-                apploads = tographite.main.sanitize(prefix + ['apploads'])
+                apploads = tographite.main.sanitize(prefix + ['appLoads'])
                 crashes = tographite.main.sanitize(prefix + ['crashes'])
                 exceptions = tographite.main.sanitize(prefix + ['exceptions'])
 
