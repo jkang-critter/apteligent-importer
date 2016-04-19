@@ -96,10 +96,10 @@ class CarbonSink(object):
             if host and port:
                 log.info('Graphite connection created.\n Connection: %s:%s\n'
                          'Protocol: %s\nMax buffer: %s', host, port, protocol,
-                          max_buffer)
+                         max_buffer)
                 self.connection = (host, port)
             else:
-                raise RuntimeError("Missing host and/or port arguments.Example:"
+                raise RuntimeError("Missing host and  port arguments.Example:"
                                    "Graphite(host=localhost, port=2004,"
                                    "protocol='plain', max_buffer=100)")
 
@@ -119,8 +119,8 @@ class CarbonSink(object):
         if max_buffer > 500:
             log.critical('max_buffer higher than 500 could hurt performance')
 
-        # All metrics are buffered in a deque. A deque is thread safe and supports
-        # fast pops and appends on both sides.
+        # All metrics are buffered in a deque. A deque is thread safe and
+        # supports fast pops and appends on both sides.
         self._buff = deque()
 
     def submit(self, path, value, timestamp):

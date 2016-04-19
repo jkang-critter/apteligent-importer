@@ -206,7 +206,6 @@ class Client(object):
         apps = self.__get_apps(tracked_attributes)
         return self.app_filter(apps)
 
-
     def performanceManagementPie(self, appids=None, duration=15,
                                  metric='volume', filterkey=None,
                                  filtervalue=None, groupby=None):
