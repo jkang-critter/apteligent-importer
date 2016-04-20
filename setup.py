@@ -57,7 +57,6 @@ setup(
     scripts=[
         'scripts/dailyjobs.py',
         'scripts/livestats.py',
-        'scripts/1mlivestats.py',
         'scripts/servicestats.py',
         'scripts/groupedby.py'
         ],
