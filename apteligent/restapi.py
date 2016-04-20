@@ -302,7 +302,7 @@ class Client(object):
 
         return r.json()
 
-    def livestats_totals(self, app_id, app_version):
+    def livestats_totals(self, app_id, app_version='total'):
         """
         API Call to the beta of Apteligent livestats. Returns the current
         totals of the day for the provided app_id.
@@ -325,7 +325,7 @@ class Client(object):
 
         return r.json()
 
-    def livestats_periodic(self, app_id, app_version, init):
+    def livestats_periodic(self, app_id, app_version='total', init=True):
         """
         API Call to the beta of Apteligent livestats. Returns metrics for the
         last 10 seconds for the provided app_id.
