@@ -1,7 +1,7 @@
 import time
 import os
 import logging
-from collections.abc import Sequence
+from collections import Sequence
 from libecgnoc.resolvepaths import Resolve
 
 log = logging.getLogger(__name__)

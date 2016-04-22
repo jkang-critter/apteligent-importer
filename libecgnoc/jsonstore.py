@@ -2,7 +2,7 @@ import time
 import json
 import os
 import logging
-from collections.abc import MutableMapping
+from collections import MutableMapping
 from libecgnoc.resolvepaths import Resolve
 
 log = logging.getLogger(__name__)
