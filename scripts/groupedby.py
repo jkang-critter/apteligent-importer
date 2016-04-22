@@ -3,6 +3,8 @@
 Script to retreive grouped mobile app data from the Crittercism REST API and
 store it into graphite.
 '''
+from __future__ import unicode_literals
+from builtins import object
 import time
 from argparse import ArgumentParser
 
@@ -15,84 +17,104 @@ from libecgnoc.groupmap import groupmap
 import apteligent
 import tographite
 
+# If you want to stop tracking a certain metric remove it below.
+APPVERSION_TRACKED_METRICS = [
+        'dau',
+        'appLoads',
+        'crashes',
+        'crashPercent',
+        'affectedUsers',
+        'affectedUserPercent'
+        ]
 
-def groupedby_carrier(app_countries, carriers_per_country,
-                      metric_root, at, gp):
-    """
-    For all the tracked apps get the Crittercism metrics per version of the app
-    """
-
-    metrics = ['crashes', 'crashPercent', 'appLoads']
-
-    apps = at.get_apps()
-    appids = list(apps.keys())
-    # If we want to stop tracking a certain metric remove it below.
-    for metric in metrics:
-        for appid in appids:
-            appName = apps[appid]['appName']
-            try:
-                country = app_countries[appid][2]
-            except LookupError:
-                log.exception('No timezone or country configuration for app.'
-                              'appName: %s appid: %s', appName, appid)
-                continue
-
-            timestamp = time.time()
-            prefix = [metric_root, appName, 'groupedby', 'carrier']
-            stats = at.errorMonitoringPie(appid=appid, metric=metric,
-                                          groupby='carrier')
-            try:
-                slices = stats['data']['slices']
-                aggregator = dict()
-                for sl in slices:
-                    blurb = sl['label']
-                    group = carriers_per_country[country].findgroup(blurb)
-                    value = sl['value']
-                    aggregator[group] = aggregator.get(group, 0) + value
-
-                for group, value in aggregator.items():
-                    path = prefix + [group, metric]
-                    gp.submit(path, value, timestamp)
-
-            except LookupError:
-                log.error('No data for metric: %s app: %s',
-                          metric, appName, exc_info=True)
-
-    gp.flush()
+CARRIER_TRACKED_METRICS = [
+        'crashes',
+        'crashPercent',
+        'appLoads'
+        ]
 
 
-def groupedby_appversion(metric_root, at, gp):
-    """
-    For all the tracked apps get the Crittercism metrics per version of the app
-    """
+class BatchJob(object):
 
-    # If we want to stop tracking a certain metric remove it below.
-    metrics = ['dau', 'appLoads', 'crashes', 'crashPercent',
-               'affectedUsers', 'affectedUserPercent']
 
-    apps = at.get_apps()
-    appids = list(apps.keys())
 
-    for metric in metrics:
-        for appid in appids:
-            appName = apps[appid]['appName']
-            timestamp = time.time()
-            prefix = [metric_root, appName, 'groupedby', 'appversion']
-            stats = at.errorMonitoringPie(appid=appid, metric=metric,
-                                          groupby='appVersion')
-            try:
-                slices = stats['data']['slices']
-                for sl in slices:
-                    group = sl['label']
-                    value = sl['value']
-                    path = prefix + [group, metric]
-                    gp.submit(path, value, timestamp)
+    def __init__(self, metric_root, at, gp, countries, carriers):
+        self.metric_root = metric_root
+        self.at = at
+        self.gp = gp
+        self.countries = countries
+        self.carriers = carriers
 
-            except LookupError:
-                log.error('No data for metric: %s app: %s',
-                          metric, appName, exc_info=True)
+    def carrier(self):
+        """
+        For all the tracked apps get the Crittercism metrics per carrier
+        """
 
-    gp.flush()
+
+        apps = self.at.get_apps()
+        appids = list(apps.keys())
+        # If we want to stop tracking a certain metric remove it below.
+        for metric in CARRIER_TRACKED_METRICS:
+            for appid in appids:
+                appName = apps[appid]['appName']
+                try:
+                    country = self.countries[appid][2]
+                except LookupError:
+                    log.exception('No timezone or country configuration.'
+                                  'appName: %s appid: %s', appName, appid)
+                    continue
+
+                timestamp = time.time()
+                prefix = [self.metric_root, appName, 'groupedby', 'carrier']
+                stats = self.at.errorMonitoringPie(
+                    appid=appid, metric=metric, groupby='carrier')
+                try:
+                    slices = stats['data']['slices']
+                    aggregator = dict()
+                    for sl in slices:
+                        blurb = sl['label']
+                        group = self.carriers[country].findgroup(blurb)
+                        value = sl['value']
+                        aggregator[group] = aggregator.get(group, 0) + value
+
+                    for group, value in aggregator.items():
+                        path = prefix + [group, metric]
+                        self.gp.submit(path, value, timestamp)
+
+                except LookupError:
+                    log.error('No data for metric: %s app: %s',
+                              metric, appName, exc_info=True)
+
+        self.gp.flush()
+
+    def appversion(self):
+        """
+        For all the tracked apps get the Crittercism metrics per version
+        """
+
+        apps = self.at.get_apps()
+        appids = list(apps.keys())
+
+        for metric in APPVERSION_TRACKED_METRICS:
+            for appid in appids:
+                appName = apps[appid]['appName']
+                timestamp = time.time()
+                prefix = [self.metric_root, appName, 'groupedby', 'appversion']
+                stats = self.at.errorMonitoringPie(
+                    appid=appid, metric=metric, groupby='appVersion')
+                try:
+                    slices = stats['data']['slices']
+                    for sl in slices:
+                        group = sl['label']
+                        value = sl['value']
+                        path = prefix + [group, metric]
+                        self.gp.submit(path, value, timestamp)
+
+                except LookupError:
+                    log.error('No data for metric: %s app: %s',
+                              metric, appName, exc_info=True)
+
+        self.gp.flush()
 
 
 def main(project):
@@ -101,16 +123,18 @@ def main(project):
 
     apteligentconf = config('apteligent')
     graphiteconf = config('graphite')
-    app_countries = config('app_timezones').data
-    carriers_per_country = groupmap(project, 'carrier')
+    countries = config('app_timezones')
+    carriers = groupmap(project, 'carrier')
 
     try:
         metric_root = apteligentconf.data.pop('metric_root')
-        at = apteligent.restapi.Client(project, **apteligentconf.data)
-        gp = tographite.CarbonSink(**graphiteconf.data)
+        at = apteligent.restapi.Client(project, **apteligentconf)
+        gp = tographite.CarbonSink(**graphiteconf)
     except TypeError:
         log.exception('The json configuration files contains an improper key.')
         raise
+
+    batchjob = BatchJob(metric_root, at, gp, countries, carriers)
 
     # Important: the ClockBasedScheduler spawns threads, so Events can
     # run in parallel
@@ -118,23 +142,21 @@ def main(project):
     event = schedule.Event
 
     # Pull in stats grouped by app version every 10 minutes
-    vargs = [metric_root, at, gp]
-    sched.addevent(event('*',  0, groupedby_appversion, *vargs))
-    sched.addevent(event('*', 10, groupedby_appversion, *vargs))
-    sched.addevent(event('*', 20, groupedby_appversion, *vargs))
-    sched.addevent(event('*', 30, groupedby_appversion, *vargs))
-    sched.addevent(event('*', 40, groupedby_appversion, *vargs))
-    sched.addevent(event('*', 50, groupedby_appversion, *vargs))
+    sched.addevent(event('*',  0, batchjob.appversion))
+    sched.addevent(event('*', 10, batchjob.appversion))
+    sched.addevent(event('*', 20, batchjob.appversion))
+    sched.addevent(event('*', 30, batchjob.appversion))
+    sched.addevent(event('*', 40, batchjob.appversion))
+    sched.addevent(event('*', 50, batchjob.appversion))
 
     # Pull in stats grouped by carrier every 10 minutes starting from 2
     # past the whole hour
-    cargs = [app_countries, carriers_per_country, metric_root, at, gp]
-    sched.addevent(event('*',  2, groupedby_carrier, *cargs))
-    sched.addevent(event('*', 12, groupedby_carrier, *cargs))
-    sched.addevent(event('*', 22, groupedby_carrier, *cargs))
-    sched.addevent(event('*', 32, groupedby_carrier, *cargs))
-    sched.addevent(event('*', 42, groupedby_carrier, *cargs))
-    sched.addevent(event('*', 52, groupedby_carrier, *cargs))
+    sched.addevent(event('*',  2, batchjob.carrier))
+    sched.addevent(event('*', 12, batchjob.carrier))
+    sched.addevent(event('*', 22, batchjob.carrier))
+    sched.addevent(event('*', 32, batchjob.carrier))
+    sched.addevent(event('*', 42, batchjob.carrier))
+    sched.addevent(event('*', 52, batchjob.carrier))
 
     sched.run()
 

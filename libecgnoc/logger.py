@@ -6,7 +6,7 @@ from __future__ import absolute_import
 import os
 import logging
 import logging.handlers
-from libecgnoc import resolvepaths
+from libecgnoc.resolvepaths import Resolve
 
 
 def setup(project, scriptfile, debug=False):
@@ -25,7 +25,7 @@ def setup(project, scriptfile, debug=False):
 
     name, ext = os.path.splitext(os.path.basename(scriptfile))
 
-    path = resolvepaths.resolve(resolvepaths.LOG, project)
+    path = Resolve(project).log()
     filename = os.path.join(path, name + '.log')
 
     # Acquire root logger.

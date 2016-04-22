@@ -5,7 +5,7 @@ from builtins import object
 import logging
 import re
 import os
-from libecgnoc import resolvepaths
+from libecgnoc.resolvepaths import Resolve
 log = logging.getLogger(__name__)
 
 
@@ -147,7 +147,7 @@ class Groupmap(object):
 
 
 def groupmap(project, name=None):
-    path = resolvepaths.resolve(resolvepaths.CONFIG, project)
+    path = Resolve(project).config()
 
     def creator(_name):
         return Groupmap(path, _name)

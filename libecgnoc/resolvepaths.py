@@ -1,35 +1,35 @@
 import os
 
-CONFIG = 0
-CACHE = 1
-LOG = 2
 
+class Resolve(object):
 
-def resolve(function, project):
-    """Return the directory where either config, cache or log files belong.
-    Function should be one of resolvepaths.CONFIG, resolvepaths.CACHE
-    or resolvepaths.LOG. The project argument should be string."""
+    def __init__(self, project):
+        self.project = project
 
-    if function == CONFIG:
+    def config(self):
         dirs = [os.getenv('CONFIG_DIR', False),
-                os.path.join(os.path.expanduser('~'), '.' + project),
-                os.path.join(os.path.expanduser('~/Library'), project),
+                os.path.join(os.path.expanduser('~'), '.' + self.project),
+                os.path.join(os.path.expanduser('~/Library'), self.project),
                 os.path.join(os.getcwd(), 'config'),
-                os.path.join('/etc', project)]
-    elif function == CACHE:
+                os.path.join('/etc', self.project)]
+        return select(dirs)
+
+    def cache(self):
         dirs = [os.getenv('CACHE_DIR', False),
                 os.path.join(os.getcwd(), 'cache'),
-                os.path.join('/var/cache/', project),
+                os.path.join('/var/cache/', self.project),
                 '/tmp']
-    elif function == LOG:
+        return select(dirs)
+
+    def log(self):
         dirs = [os.getenv('LOG_DIR', False),
                 os.path.join(os.getcwd(), 'log'),
-                os.path.join('/var/log', project),
+                os.path.join('/var/log', self.project),
                 '/tmp']
-    else:
-        raise RuntimeError('function should be resolve.paths.CONFIG,'
-                           'resolvepaths.CACHE or resolvepaths.LOG')
+        return select(dirs)
 
+
+def select(dirs):
     for candidate in dirs:
         if candidate and os.path.isdir(candidate):
             return candidate

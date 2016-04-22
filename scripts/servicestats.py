@@ -4,79 +4,89 @@ Import the web service performance stats from apteligent REST API
 into graphite.
 '''
 
+from __future__ import unicode_literals
+from builtins import object
+import time
 from libecgnoc import (logger,
                        schedule,
                        jsonstore,
                        textstore)
 
 import apteligent
+from apteligent import RequestException
 import tographite
 
 
-import time
 from argparse import ArgumentParser
 
-services_whitelist = None
 
+class BatchJob(object):
 
-def import_servicestats(metric_root, at, gp):
-    """
-    Stats on web services including ecg api services.
-    """
-    failures = list()
+    def __init__(self, metric_root, at, gp):
+        self.metric_root = metric_root
+        self.at = at
+        self.gp = gp
+        self.whitelist = None
 
-    # These are the available parameters of the apteligent REST_API
-    # performanceManagementPie
-    metrics = ['dataIn', 'dataOut', 'latency', 'volume', 'errors']
-    # filterKeys = ['appVersion', 'carrier', 'device', 'os', 'service']
-    # groupBy = ['appId', 'appVersion', 'carrier', 'device', 'os', 'service']
+    def run(self):
+        """
+        Stats on web services including ecg api services.
+        """
+        failures = list()
+        self.whitelist.refresh()
 
-    apps = at.get_apps()
-    for appId in apps:
-        appName = apps[appId]['appName']
-        prefix = [metric_root, appName, 'services']
-        for metric in metrics:
+        # These are the available metrics of the apteligent REST_API
+        # performanceManagementPie
+        metrics = ['dataIn', 'dataOut', 'latency', 'volume', 'errors']
+
+        apps = self.at.get_apps()
+        for appId in apps:
+            appName = apps[appId]['appName']
+            prefix = [self.metric_root, appName, 'services']
+            for metric in metrics:
+                try:
+                    data = self.at.performanceManagementPie(
+                        appids=[appId],
+                        metric=metric,
+                        groupby='service')
+                except:
+                    log.exception('Failed to get %s for %s.', metric, appId)
+                    failures.append((prefix, appId, metric))
+                    continue
+                self.process(prefix, metric, data)
+
+        return failures
+
+    def process(self, prefix, metric, data):
+        """
+        Before the results from a performanceManagementPie API call can be send
+        to graphite it needs to be sliced and diced.
+        """
+        timestamp = time.mktime(time.strptime(data['data']['end'],
+                                              '%Y-%m-%dT%H:%M:%S'))
+        for dataslice in data['data']['slices']:
+            service = dataslice['label']
+            if service in self.whitelist:
+                path = prefix + [service, metric]
+                self.gp.submit(
+                    path, dataslice['value'], timestamp)
+
+    def retry(self, failures):
+        """
+        Failed requests are retried one time
+        """
+        log.info('Retrying %s failed apteligent requests.', len(failures))
+        for prefix, appId, metric in failures:
             try:
-                data = at.performanceManagementPie(appids=[appId],
-                                                   metric=metric,
-                                                   groupby='service')
-            except:
-                log.exception('Failed to get %s for %s.', metric, appId)
-                failures.append((prefix, appId, metric))
-                continue
-            processdata(prefix, metric, data, gp)
-
-    return failures
-
-
-def processdata(prefix, metric, data, gp):
-    """
-    Before the results from a performanceManagementPie API call can be send to
-    graphite it needs to be sliced and diced.
-    """
-    timestamp = time.mktime(time.strptime(data['data']['end'],
-                                          '%Y-%m-%dT%H:%M:%S'))
-    for dataslice in data['data']['slices']:
-        service = dataslice['label']
-        if service in services_whitelist:
-            gp.submit(prefix + [dataslice['label'], metric],
-                      dataslice['value'], timestamp)
-
-
-def retryfailures(at, gp, failures):
-    """
-    Failed requests are retried one time
-    """
-    log.info('Retrying %s failed apteligent requests.', len(failures))
-    for prefix, appId, metric in failures:
-        try:
-            data = at.performanceManagementPie(appids=[appId],
-                                               metric=metric,
-                                               groupby='service')
-        except RequestException:
-            log.exception('Abandoning current run. Flushing current buffer.'
-                          'Retry at next run.')
-        processdata(prefix, metric, data, gp)
+                data = self.at.performanceManagementPie(
+                    appids=[appId],
+                    metric=metric,
+                    groupby='service')
+            except RequestException:
+                log.exception('Abandoning current run.'
+                              'Flushing current buffer.'
+                              'Retry at next run.')
+            self.processdata(prefix, metric, data)
 
 
 def main(project):
@@ -86,26 +96,24 @@ def main(project):
     apteligentconf = config('apteligent')
     graphiteconf = config('graphite')
 
-    global services_whitelist
-    services_whitelist = textstore.whitelist(project, 'services')
-
     try:
-        metric_root = apteligentconf.data.pop('metric_root')
-        at = apteligent.restapi.Client(project, **apteligentconf.data)
-        gp = tographite.CarbonSink(**graphiteconf.data)
+        metric_root = apteligentconf.pop('metric_root')
+        at = apteligent.restapi.Client(project, **apteligentconf)
+        gp = tographite.CarbonSink(**graphiteconf)
     except TypeError:
         log.exception('The json configuration files contain an improper key.')
         raise
 
     sched = schedule.EveryXMinutes(15)
+    batchjob = BatchJob(metric_root, at, gp)
+    batchjob.whitelist = textstore.whitelist(project, 'services')
 
     while True:
-        services_whitelist.refresh()
         sched.sleep_until_next_run()
-        failures = import_servicestats(metric_root, at, gp)
+        failures = batchjob.run()
         if failures:
             time.sleep(120)
-            retryfailures(at, gp, failures)
+            batchjob.retry(failures)
         gp.flush()
 
 if __name__ == "__main__":

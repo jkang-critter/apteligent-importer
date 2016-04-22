@@ -1,14 +1,14 @@
-from builtins import object
 import time
 import json
 import os
 import logging
-from libecgnoc import resolvepaths
+from collections.abc import MutableMapping
+from libecgnoc.resolvepaths import Resolve
 
 log = logging.getLogger(__name__)
 
 
-class JSONstore(object):
+class JSONstore(MutableMapping):
     Extension = '.json'
 
     def __init__(self, storagedir, name, readonly=True):
@@ -21,6 +21,24 @@ class JSONstore(object):
             self.load()
         if readonly:
             self.store = self._disabled
+
+    def __getitem__(self, key):
+        return self.data[key]
+
+    def __setitem__(self, key, val):
+        self.data[key] = val
+
+    def __delitem__(self, key):
+        del self.data[key]
+
+    def __len__(self):
+        return len(self.data)
+
+    def __iter__(self):
+        return iter(self.data)
+
+    def __repr__(self):
+        return json.dumps(self.data, indent=4, sort_keys=True)
 
     def _disabled(self):
         raise RuntimeError('Method is disabled')
@@ -76,7 +94,8 @@ class JSONstore(object):
 
 
 def config(project, name=None):
-    storagedir = resolvepaths.resolve(resolvepaths.CONFIG, project)
+    resolve = Resolve(project)
+    storagedir = resolve.config()
 
     def creator(_name):
         return JSONstore(storagedir, _name, readonly=True)
@@ -88,7 +107,8 @@ def config(project, name=None):
 
 
 def cache(project, name=None):
-    storagedir = resolvepaths.resolve(resolvepaths.CACHE, project)
+    resolve = Resolve(project)
+    storagedir = resolve.cache()
 
     def creator(_name):
         return JSONstore(storagedir, _name, readonly=False)
