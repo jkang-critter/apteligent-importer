@@ -12,7 +12,7 @@ class Textstore(Sequence):
     def __init__(self, name, path):
         self.name = name
         self.path = path
-        self.data = list()
+        self.data = set()
         self.last_update = None
         if self.exists():
             self.load()
@@ -35,11 +35,10 @@ class Textstore(Sequence):
                     if line.startswith('#'):
                         continue
                     elif line:
-                        self.data.append(line)
+                        self.data.add(line)
 
                 log.info('Read text file: %s.', self.path)
                 self.last_update = time.time()
-                self.as_set()
                 return self.data
         except IOError as e:
             log.exception("Script failed to open %s\n %(e)s", self.path, e)
@@ -50,12 +49,8 @@ class Textstore(Sequence):
 
     def refresh(self):
         if self.last_modified() > self.last_update:
-            self.data = list()
+            self.data.clear()
             self.load()
-            self.as_set()
-
-    def as_set(self):
-        raise RuntimeError('The Textstore class should not be used by itself')
 
 
 class Blacklist(Textstore):
@@ -65,12 +60,8 @@ class Blacklist(Textstore):
         path = os.path.join(storagedir, name + self.Extension)
         super(Blacklist, self).__init__(name, path)
 
-    def as_set(self):
-        self.blacklist = set(self.data)
-        return self.blacklist
-
     def __contains__(self, item):
-        reject = item in self.blacklist
+        reject = item in self.data
         if reject:
             log.debug('REJECT: %s in blacklist: %s', item, self.path)
         else:
@@ -99,12 +90,8 @@ class Whitelist(Textstore):
         path = os.path.join(storagedir, name + self.Extension)
         super(Whitelist, self).__init__(name, path)
 
-    def as_set(self):
-        self.whitelist = set(self.data)
-        return self.whitelist
-
     def __contains__(self, item):
-        allow = item in self.whitelist
+        allow = item in self.data
         if allow:
             log.debug('ALLOWED: %s', item)
         else:
