@@ -86,7 +86,7 @@ class BatchJob(object):
                 log.exception('Abandoning current run.'
                               'Flushing current buffer.'
                               'Retry at next run.')
-            self.processdata(prefix, metric, data)
+            self.process(prefix, metric, data)
 
 
 def main(project):

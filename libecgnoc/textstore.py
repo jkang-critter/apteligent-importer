@@ -1,13 +1,13 @@
+from builtins import object
 import time
 import os
 import logging
-from collections import Sequence
 from libecgnoc.resolvepaths import Resolve
 
 log = logging.getLogger(__name__)
 
 
-class Textstore(Sequence):
+class Textstore(object):
 
     def __init__(self, name, path):
         self.name = name
@@ -17,12 +17,6 @@ class Textstore(Sequence):
         if self.exists():
             self.load()
         log.debug('%s at %s', name, path)
-
-    def __getitem__(self, key):
-        return self.data[key]
-
-    def __len__(self):
-        return len(self.data)
 
     def exists(self):
         return os.path.isfile(self.path)
