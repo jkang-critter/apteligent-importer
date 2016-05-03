@@ -16,6 +16,9 @@ class Textstore(object):
         self.last_update = None
         if self.exists():
             self.load()
+        else:
+            raise RuntimeError('File does not exist: %s', self.path)
+
         log.debug('%s at %s', name, path)
 
     def exists(self):

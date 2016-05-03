@@ -17,10 +17,21 @@ class JSONstore(MutableMapping):
         self.data = dict()
         self.last_update = None
         log.debug('%s at %s', name, self.path)
-        if self.exists():
-            self.load()
         if readonly:
             self.store = self._disabled
+        else:
+            self.store = self._store
+
+        if self.exists():
+            self.load()
+        elif readonly:
+            raise RuntimeError('File does not exist: %s', self.path)
+        else:
+            try:
+                open(self.path, 'w').close()
+            except IOError:
+                log.exception('Cannot open %s for writing.', self.path)
+                raise
 
     def __getitem__(self, key):
         return self.data[key]
@@ -61,15 +72,15 @@ class JSONstore(MutableMapping):
             log.exception("Script failed to open or write %s\n %(e)s",
                           self.path, e)
             raise
-        except json.JSONDecodeError as e:
-            log.exception("Simplejson was unable to parse %s:\n %(e)s",
+        except ValueError as e:
+            log.exception("Unable to parse json from %s:\n %(e)s",
                           self.path, e)
             raise
 
     def last_modified(self):
         return os.path.getmtime(self.path)
 
-    def store(self):
+    def _store(self):
         lockfile = self.path + '.lock'
         if os.path.isfile(lockfile):
             log.warning('Could not acquire lock file %s', lockfile)
@@ -84,8 +95,8 @@ class JSONstore(MutableMapping):
             log.exception("Script failed to open or write %s\n %(e)s",
                           self.path, e)
             raise
-        except json.JSONDecodeError as e:
-            log.exception("Simplejson was unable to parse %s:\n %(e)s",
+        except ValueError as e:
+            log.exception("Unable to generate json for %s:\n %(e)s",
                           self.path, e)
             raise
         finally:

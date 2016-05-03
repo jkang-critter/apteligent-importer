@@ -127,6 +127,8 @@ class Groupmap(object):
         self.last_update = None
         if self.exists():
             self.load()
+        else:
+            raise RuntimeError('File %s does not exist', self.path)
 
     def __getitem__(self, key):
         return self.data[key]
