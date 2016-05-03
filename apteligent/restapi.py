@@ -106,7 +106,7 @@ class Client(object):
         if self.token.exists():
             try:
                 self.token.refresh()
-            except ValueError, IOError:
+            except (ValueError, IOError):
                 self.new_token()
         else:
             self.new_token()
@@ -139,11 +139,10 @@ class Client(object):
             try:
                 self.apps.refresh()
                 return self.apps.data
-            except ValueError, IOError:
+            except (ValueError, IOError):
                 return self.new_apps()
         else:
             return self.new_apps()
-
 
     def new_apps(self):
         apps = self.__get_apps(['appName',

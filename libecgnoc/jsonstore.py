@@ -70,13 +70,11 @@ class JSONstore(MutableMapping):
                 log.info('Loaded %s from json cache.', self.path)
                 self.last_update = time.time()
                 return self.data
-        except IOError as e:
-            log.exception("Script failed to open or write %s\n %(e)s",
-                          self.path, e)
+        except IOError:
+            log.exception("Script failed to open or write to %s", self.path)
             raise
-        except ValueError as e:
-            log.exception("Unable to parse json from %s:\n %(e)s",
-                          self.path, e)
+        except ValueError:
+            log.exception("Unable to parse json from %s", self.path)
             raise
 
     def last_modified(self):
