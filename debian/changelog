@@ -1,14 +1,5 @@
-apteligentimporter (0.4ubuntu2) trusty; urgency=medium
+apteligentimporter (1.0) trusty; urgency=medium
 
-  *  Include pingdom script
-  *  Use security extensions for python requests
-  *  install in opt
+  First public release of apteligentimporter
 
- --  Paul frederiks <pfrederiks@ebay.com>  Tue, 22 Mar 2016 13:24:21 +0000
-
-apteligentimporter (0.1) unstable; urgency=low
-
-  * a0ec460 Initial commit
-
-
- -- Paul frederiks <pfrederiks@ebay.com>  Thu, 10 Mar 2016 16:23:52 +0000
+ --  Paul frederiks <pfrederiks@ebay.com>  Tue, 3 May 2016 10:31:00 +0000

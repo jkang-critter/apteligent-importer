@@ -34,8 +34,8 @@ Now cached files and logs will end up in /tmp.
 Production environment
 ----------------------
 There is no clear cut way how to set up an production environment. At eCG NOC we build debian packages with
-`dh-virtualenv` and handle configuration with puppet. You will need an ubuntu or debian build host to create the
-packages. If all build dependencies of `dh-virtualenv` and python are met, building is easy:
+``dh-virtualenv`` and handle configuration with puppet. You will need an ubuntu or debian build host to create the
+packages. If all build dependencies of ``dh-virtualenv`` and python are met, building is easy:
 
 1. Check if all build dependencies are met.
    ``dpkg-checkbuilddeps``
@@ -54,7 +54,7 @@ In production the following directories are expected to be present and accessibl
     Logs           ``/var/log/<project>``    `LOG_DIR`
     =============  ========================  ====================
 
-Where <project> is either *apteligent-importer* or set by the -p switch for each script. Each directory can be
+Where ``<project>`` is either *apteligent-importer* or set by the -p switch for each script. Each directory can be
 overridden individually with an enviroment variable.
 
 It is recommended to run the scripts under a service manager like supervisord or monit.
@@ -62,35 +62,83 @@ It is recommended to run the scripts under a service manager like supervisord or
 Scripts
 -------
 
-The following scripts are included.
+The import of Apteligent data is performed by four different scripts.
 
-* dailyjobs.py:
+**dailyjobs.py**
     This script imports daily stats from Apteligent into graphite. Because the configured timezone determines
-    when counters are reset, this script depends on the app_timezone.json config file.
-* livestats.py:
+    when counters are reset, this script depends on the app_timezone.json config file. Commandline arguments::
+
+        usage: dailyjobs.py [-h] [-p PROJECT] [-q]
+
+        optional arguments:
+         -h, --help            show this help message and exit
+         -p PROJECT, --project PROJECT
+                               Project name
+         -q, --quiet           Suppress debug level log messages
+
+**livestats.py**
     This script imports the apteligent livestats into graphite. This API is currently (november 2015) still in
     beta. All data is updated every 10 seconds, requiring this script to use a Thread pool to handle requests in
-    parallel.
-* groupedby.py:
+    parallel. Commandline arguments::
+
+        usage: livestats.py [-h] [-p PROJECT] [-q] [-i INTERVAL]
+
+        Script to import the apteligent livestats out of the current beta API every
+        few minutes. Results are returned in 10 second buckets.
+
+        optional arguments:
+          -h, --help            show this help message and exit
+          -p PROJECT, --project PROJECT
+                                Project name
+          -q, --quiet           Suppress debug level log messages
+          -i INTERVAL, --interval INTERVAL
+                                Polling interval in minutes from 1 upto 5.
+**groupedby.py**
     This script imports totals for each app grouped by version string and by carrier. Because it is a running
     total you need a graphite function like nonNegativeDerivative() or perSecond() to convert the graph to a rate.
-* servicestats.py:
+    Commandline arguments::
+
+        usage: groupedby.py [-h] [-p PROJECT] [-q]
+
+        Script to retreive grouped mobile app data from the Crittercism REST API and
+        store it into graphite.
+
+        optional arguments:
+          -h, --help            show this help message and exit
+          -p PROJECT, --project PROJECT
+                                Project name
+          -q, --quiet           Suppress debug level log messages
+
+**servicestats.py**
     This script imports performance data of web services used by the apps from Apteligent. Please keep the
     services.whitelist file up to date. A whitelist is required because Apteligent regards things like WIFI
-    hotspots as services.
+    hotspots as services. Commandline arguments::
+
+        usage: servicestats.py [-h] [-p PROJECT] [-q]
+
+        Import the web service performance stats from apteligent REST API into
+        graphite.
+
+        optional arguments:
+          -h, --help            show this help message and exit
+          -p PROJECT, --project PROJECT
+                                Project name
+          -q, --quiet           Suppress debug level log messages
 
 Configuration files
 -------------------
 
-* app.blacklist:
+The following configuration files are required. You can find examples in ``conf/``.
+
+**app.blacklist**
     Contains a list of Apteligent AppID's to block
-* app_timezones.json:
+**app_timezones.json**
     Every Apteligent has a timezone configured which determines the moment counters are reset.  Like Apteligent we use GMT offsets
-* carrier.map:
+**carrier.map**
     Structured file containing regexes for strings identifying mobile carriers in different countries.
-* apteligent.json:
+**apteligent.json**
     Apteligent account details including credentials, clientID and API hostname.
-* graphite.json:
+**graphite.json**
     The connection to the carbon relay daemon is setup here. Use the 'dummy' protocol for testing.
-* services.whitelist:
+**services.whitelist**
     Contains a list of web services we want to track through the crittercism API.
