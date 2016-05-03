@@ -19,12 +19,6 @@ def dailystats(metric_root, appid, at, gp):
     day, in other words
     yesterday, will be stored
     """
-    # Calculating 'yesterday' turned out to be a challenge.
-    # I settled on using the ordinal value of the date. The python
-    # documentation is not clear on what this is,
-    # but it basically is the number of days since January 1st of the year 1.
-    # I am still not sure if this is the best approach considering all the
-    # different timezones.
     yesterday = datetime.today().toordinal() - 1
     timestamp = time.mktime(datetime.fromordinal(yesterday).timetuple())
     apps = at.get_apps()
