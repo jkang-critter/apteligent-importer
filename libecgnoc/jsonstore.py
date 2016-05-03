@@ -28,10 +28,12 @@ class JSONstore(MutableMapping):
             raise RuntimeError('File does not exist: %s', self.path)
         else:
             try:
-                open(self.path, 'w').close()
+                open(self.path + '.test', 'w').close()
             except IOError:
                 log.exception('Cannot open %s for writing.', self.path)
                 raise
+            else:
+                os.remove(self.path + '.test')
 
     def __getitem__(self, key):
         return self.data[key]

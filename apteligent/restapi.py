@@ -104,7 +104,10 @@ class Client(object):
         fetches a new one using current credentials.
         """
         if self.token.exists():
-            self.token.refresh()
+            try:
+                self.token.refresh()
+            except ValueError, IOError:
+                self.new_token()
         else:
             self.new_token()
 
@@ -133,12 +136,14 @@ class Client(object):
 
     def get_apps(self):
         if self.apps.exists():
-            self.apps.refresh()
-            return self.apps.data
+            try:
+                self.apps.refresh()
+                return self.apps.data
+            except ValueError, IOError:
+                return self.new_apps()
         else:
             return self.new_apps()
 
-        return self.apps.data
 
     def new_apps(self):
         apps = self.__get_apps(['appName',
