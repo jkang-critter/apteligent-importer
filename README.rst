@@ -9,8 +9,8 @@ a datastore first. For development it is possible to use the 'dummy' protocol wh
 Development environment
 -----------------------
 
-I recommend the use of a python virtual environment for development. The scripts are only tested on Python 2.7
-but a port to python3 compatible code is in the works. To set up a dev environment on mac, do the following:
+I recommend the use of a python virtual environment for development. Both python 2.7 and 3.5 are supported.
+To set up a python 2.7 dev environment on mac, do the following:
 
 0. Unpack tar or git clone this project. cd into its directory
 1. Install the latest python 2.7 with homebrew.
@@ -25,7 +25,7 @@ but a port to python3 compatible code is in the works. To set up a dev environme
     ``pip install -e .``
 6. Create a hidden directory named after the project in you home directory and move all examples configuration.
     | ``mkdir ~/.apteligent-importer``
-    | ``mv etc/apteligent-importer/* ~/.apteligent-importer``
+    | ``mv conf/apteligent-importer/* ~/.apteligent-importer``
 7. Adapt the configuration to your liking.
 8. Run any of the installed scripts.
 
@@ -39,9 +39,10 @@ packages. If all build dependencies of `dh-virtualenv` and python are met, build
 
 1. Check if all build dependencies are met.
    ``dpkg-checkbuilddeps``
-2. Add a changelog entry in debian/changelog manually or use ``dch`` from the _devscripts_ package.
-3. Build an unsigned package:
-    ``dpkg-buildpackage -us -uc``
+2. Install any missing build dependencies.
+3. Add a changelog entry in debian/changelog manually or use ``dch`` from the _devscripts_ package.
+4. Build an unsigned binary package:
+    ``dpkg-buildpackage -us -uc -b``
 
 In production the following directories are expected to be present and accessible to the user running the scripts
 
