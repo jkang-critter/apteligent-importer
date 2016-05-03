@@ -39,7 +39,8 @@ setup(
     author_email=EMAIL,
     maintainer=AUTHOR,
     maintainer_email=EMAIL,
-    version='1.0',
+    url='https://github.com/pfrederiks/apteligent-importer',
+    version='1.0.1',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: MIT License',
@@ -62,4 +63,4 @@ setup(
         ],
     license='MIT',
     install_requires=requirements()
-)
+    )
