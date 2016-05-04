@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 from builtins import object
 import time
 import os
@@ -27,6 +28,7 @@ class Textstore(object):
     def load(self):
         try:
             with open(self.path, 'r') as store:
+                self.data.clear()
                 for line in store:
                     line = line.strip()
                     if line.startswith('#'):
@@ -36,16 +38,15 @@ class Textstore(object):
 
                 log.info('Read text file: %s.', self.path)
                 self.last_update = time.time()
-                return self.data
-        except IOError as e:
-            log.exception("Script failed to open %s\n %(e)s", self.path, e)
+        except (IOError, OSError):
+            log.exception("Script failed to open %s\n", self.path)
             raise
 
     def last_modified(self):
         return os.path.getmtime(self.path)
 
     def refresh(self):
-        if self.last_modified() > self.last_update:
+        if self.last_update is None or self.last_modified() > self.last_update:
             self.data.clear()
             self.load()
 
