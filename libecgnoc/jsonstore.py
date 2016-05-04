@@ -25,7 +25,9 @@ class JSONstore(MutableMapping):
         if self.exists():
             self.load()
         elif readonly:
-            raise RuntimeError('File does not exist: %s', self.path)
+            msg = 'File does not exist: {}'.format(self.path)
+            log.critical(msg)
+            raise RuntimeError(msg)
         else:
             try:
                 open(self.path + '.test', 'w').close()
@@ -60,17 +62,19 @@ class JSONstore(MutableMapping):
         return os.path.isfile(self.path)
 
     def refresh(self):
-        if self.last_update < self.last_modified():
+        if self.last_update is None or self.last_update < self.last_modified():
             self.load()
 
     def load(self):
+        """Load json data from file into data dict"""
         try:
             with open(self.path, 'r') as store:
-                self.data = json.load(store)
+                blob = json.load(store)
+                self.clear()
+                self.update(blob)
                 log.info('Loaded %s from json cache.', self.path)
                 self.last_update = time.time()
-                return self.data
-        except IOError:
+        except (IOError, OSError):
             log.exception("Script failed to open or write to %s", self.path)
             raise
         except ValueError:
@@ -78,7 +82,10 @@ class JSONstore(MutableMapping):
             raise
 
     def last_modified(self):
-        return os.path.getmtime(self.path)
+        try:
+            return os.path.getmtime(self.path)
+        except (IOError, OSError):
+            return 0
 
     def _store(self):
         lockfile = self.path + '.lock'
@@ -91,13 +98,13 @@ class JSONstore(MutableMapping):
                 json.dump(self.data, store, indent=4)
                 log.info('Stored %s in json cache.', self.path)
                 self.last_update = time.time()
-        except IOError as e:
-            log.exception("Script failed to open or write %s\n %(e)s",
-                          self.path, e)
+        except (IOError, OSError):
+            log.exception("Script failed to open or write %s",
+                          self.path)
             raise
-        except ValueError as e:
-            log.exception("Unable to generate json for %s:\n %(e)s",
-                          self.path, e)
+        except ValueError:
+            log.exception("Unable to generate json for %s:\n",
+                          self.path)
             raise
         finally:
             lock.close()

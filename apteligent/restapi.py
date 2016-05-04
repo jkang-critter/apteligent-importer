@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 from builtins import object
 import json
 import time
@@ -106,14 +107,17 @@ class Client(object):
         if self.token.exists():
             try:
                 self.token.refresh()
-            except (ValueError, IOError):
+            except (ValueError, IOError, OSError):
                 self.new_token()
         else:
             self.new_token()
 
-        return 'Bearer' + ' ' + self.token.data['access_token']
+        return 'Bearer' + ' ' + self.token['access_token']
 
     def new_token(self):
+        """
+        Fetch and store a new OAuth token from Apteligent.
+        """
         log.info('Getting a new authorization token from apteligent')
 
         payload = {'grant_type': 'password', 'username': self.username,
@@ -124,43 +128,46 @@ class Client(object):
                           proxies=self.proxies)
 
         check_http_interaction(r)
-        self.token.data = r.json()
-        self.token.data['expiration'] = (time.time() +
-                                         self.token.data['expires_in'])
+        self.token.update(r.json())
+        self.token['expiration'] = (
+            time.time() + self.token['expires_in'])
         self.token.store()
-        return self.token
 
     def appname(self, appId):
-        apps = self.get_apps()
-        return apps[appId]['appName']
+        """
+        Return the appName based on appId.
+        """
+        return self.get_apps()[appId]['appName']
 
     def get_apps(self):
         if self.apps.exists():
             try:
                 self.apps.refresh()
-                return self.apps.data
-            except (ValueError, IOError):
-                return self.new_apps()
+            except (ValueError, IOError, OSError):
+                self.new_apps()
         else:
-            return self.new_apps()
+            self.new_apps()
+
+        return self.apps
 
     def new_apps(self):
-        apps = self.__get_apps(['appName',
-                                'linkToAppStore',
-                                'appVersions',
-                                'latestVersionString',
-                                'iconURL'])
+        apps = self.__get_apps([
+            'appName',
+            'linkToAppStore',
+            'appVersions',
+            'latestVersionString',
+            'iconURL'])
 
-        self.apps.data = self.app_filter(apps)
+        self.app_filter(apps)
+        self.apps.clear()
+        self.apps.update(apps)
 
         log.info("List of apps has been updated.")
         log.info("Tracking %s apps.", len(apps))
         self.apps.store()
-        return apps
 
     def app_filter(self, apps):
         self.app_blacklist.refresh()
-        self.app_blacklist.as_set()
         appids = list(apps.keys())
         for appid in appids:
             if appid in self.app_blacklist:
@@ -169,8 +176,6 @@ class Client(object):
             else:
                 # remove useless links section from results
                 del apps[appid]['links']
-
-        return apps
 
     def __get_apps(self, tracked_attributes):
         tokenstr = self.get_token()
