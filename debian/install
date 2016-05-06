@@ -1,6 +1,6 @@
-conf/app.blacklist etc/apteligentimporter/app.blacklist
-conf/app_timezones.json etc/apteligentimporter/app_timezones.json
-conf/apteligent.json etc/apteligentimporter/apteligent.json
-conf/carrier.map etc/apteligentimporter/carrier.map
-conf/graphite.json etc/apteligentimporter/graphite.json
-conf/services.whitelist etc/apteligentimporter/services.whitelist
+conf/app.blacklist etc/apteligent-importer
+conf/app_timezones.json etc/apteligent-importer
+conf/apteligent.json etc/apteligent-importer
+conf/carrier.map etc/apteligent-importer
+conf/graphite.json etc/apteligent-importer
+conf/services.whitelist etc/apteligent-importer
