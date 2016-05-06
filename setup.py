@@ -40,7 +40,7 @@ setup(
     maintainer=AUTHOR,
     maintainer_email=EMAIL,
     url='https://github.com/pfrederiks/apteligent-importer',
-    version='1.0.5',
+    version='1.0.6',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: MIT License',
